@@ -6,13 +6,14 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "primaryColor": "#141312",
-    "backgroundColor": "#141312",
+    "primaryColor": "#000000",
+    "backgroundColor": "#000000",
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "package": "com.mesa.foodjournal",
+      "backgroundColor": "#000000",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -26,7 +27,15 @@
     },
     "plugins": [
       "expo-sqlite",
-      "expo-image"
+      "expo-image",
+      [
+        "expo-navigation-bar",
+        {
+          "enforceContrast": false,
+          "style": "dark"
+        }
+      ],
+      "expo-font"
     ]
   }
 }

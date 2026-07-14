@@ -1,7 +1,7 @@
 export const Theme = {
   colors: {
-    // Canvas (the "moment" layer - camera, hero photo, greeting): dark polar tone
-    canvasBackground: '#141312', // Warm near-black
+    // Canvas (the "moment" layer - camera, hero photo, greeting): pure black
+    canvasBackground: '#000000',
     canvasText: '#F7F4EF', // Off-white text for canvas readability
     canvasTextMuted: '#9A958F', // Muted text for canvas secondary text
 
@@ -18,6 +18,10 @@ export const Theme = {
 
   typography: {
     // Two weights only across the whole app (no light/book weights, no semi-bolds)
+    families: {
+      regular: 'Nexa-Light',
+      bold: 'Nexa-Bold',
+    },
     weights: {
       regular: '400' as const,
       bold: '700' as const,

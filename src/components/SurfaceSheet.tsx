@@ -7,9 +7,9 @@ import Animated, {
   withSpring,
   runOnJS,
   interpolate,
-  useDerivedValue,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Theme } from '../theme';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -21,6 +21,8 @@ interface SurfaceSheetProps {
   expandedOffset?: number;
   revealedOffset?: number;
   peekOffset?: number;
+  onStateChange?: (state: 'peek' | 'revealed' | 'expanded') => void;
+  snapToState?: 'peek' | 'revealed' | 'expanded';
 }
 
 const SPRING_CONFIG = {
@@ -36,10 +38,28 @@ export const SurfaceSheet: React.FC<SurfaceSheetProps> = ({
   expandedOffset = 0,
   revealedOffset = SCREEN_HEIGHT * 0.45,
   peekOffset = SCREEN_HEIGHT - 100,
+  onStateChange,
+  snapToState,
 }) => {
+  const insets = useSafeAreaInsets();
+
   // Start resting at the Peek state
   const translateY = useSharedValue(peekOffset);
   const context = useSharedValue(0);
+
+  // Programmatic snapping when parent changes snapToState
+  React.useEffect(() => {
+    if (snapToState === undefined) return;
+
+    let targetOffset = peekOffset;
+    if (snapToState === 'revealed') {
+      targetOffset = revealedOffset;
+    } else if (snapToState === 'expanded') {
+      targetOffset = expandedOffset;
+    }
+
+    translateY.value = withSpring(targetOffset, SPRING_CONFIG);
+  }, [snapToState, peekOffset, revealedOffset, expandedOffset]);
 
   // Track active state for haptic ticks
   const currentSnapState = useSharedValue<'peek' | 'revealed' | 'expanded'>('peek');
@@ -109,6 +129,20 @@ export const SurfaceSheet: React.FC<SurfaceSheetProps> = ({
         }
       }
 
+      // Determine state immediately on gesture end and trigger callback
+      let targetState: 'peek' | 'revealed' | 'expanded' = 'peek';
+      if (closestSnapPoint === expandedOffset) {
+        targetState = 'expanded';
+      } else if (closestSnapPoint === revealedOffset) {
+        targetState = 'revealed';
+      } else {
+        targetState = 'peek';
+      }
+
+      if (onStateChange) {
+        runOnJS(onStateChange)(targetState);
+      }
+
       // Animate with premium spring physics
       translateY.value = withSpring(closestSnapPoint, SPRING_CONFIG, (finished) => {
         if (finished) {
@@ -133,6 +167,20 @@ export const SurfaceSheet: React.FC<SurfaceSheetProps> = ({
     };
   });
 
+  // Smoothly fade out the drag handle as it nears the top (expanded)
+  const handleAnimatedStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(
+      translateY.value,
+      [expandedOffset, expandedOffset + 60],
+      [0, 0.8],
+      'clamp'
+    );
+
+    return {
+      opacity,
+    };
+  });
+
   return (
     <GestureDetector gesture={panGesture}>
       <Animated.View style={[styles.sheet, animatedStyle]}>
@@ -141,12 +189,12 @@ export const SurfaceSheet: React.FC<SurfaceSheetProps> = ({
           {headerComponent ? (
             headerComponent
           ) : (
-            <View style={styles.dragHandle} />
+            <Animated.View style={[styles.dragHandle, handleAnimatedStyle]} />
           )}
         </View>
 
-        {/* Content of the sheet */}
-        <View style={styles.content}>
+        {/* Content of the sheet with bottom safe area padding */}
+        <View style={[styles.content, { paddingBottom: insets.bottom }]}>
           {children}
         </View>
       </Animated.View>
