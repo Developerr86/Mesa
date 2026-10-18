@@ -9,7 +9,8 @@
     "primaryColor": "#141312",
     "backgroundColor": "#141312",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.mesa.foodjournal"
     },
     "android": {
       "package": "com.mesa.foodjournal",
@@ -26,7 +27,16 @@
     },
     "plugins": [
       "expo-sqlite",
-      "expo-image"
+      "expo-image",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Mesa uses your camera to capture photos of your meals."
+        }
+      ],
+      "expo-status-bar",
+      "expo-asset",
+      "react-native-fast-tflite"
     ]
   }
 }

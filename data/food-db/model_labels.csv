@@ -1,0 +1,95 @@
+model_label,dish_id
+Aloo paratha,aloo_paratha
+Bhakri,bajra_roti
+Puri,puri
+White rice,steamed_rice
+Fried rice,veg_fried_rice
+Pilaf,veg_pulao
+Khichdi,khichdi
+Hyderabadi biryani,hyderabadi_biryani
+Dal makhani,dal_makhani
+Dal bhat,dal_tadka
+Rajma,rajma
+Chana masala,chole
+Kadhi,kadhi
+Sambar,sambar
+Aloo gobi,aloo_gobi
+Dum Aloo,aloo_sabzi
+Kofta,malai_kofta
+Sarson da saag,sarson_saag
+Bhaji,pav_bhaji
+Misal,misal
+Shahi paneer,shahi_paneer
+Palak paneer,palak_paneer
+Paneer tikka,paneer_tikka
+Butter chicken,butter_chicken
+Chicken curry,chicken_curry
+Tandoori chicken,tandoori_chicken
+Shami kebab,shami_kebab
+Mutton curry,mutton_curry
+Rogan josh,rogan_josh
+Nihari,nihari
+Haleem,haleem
+Machher Jhol,macher_jhol
+Fish head curry,fish_curry
+Fried fish,fish_fry
+Omelette,plain_omelette
+Deviled egg,boiled_egg
+Idli,idli
+Upma,upma
+Puttu,puttu
+Sabudana Khichadi,sabudana_khichdi
+Dhokla,dhokla
+Chole bhature,chole_bhature
+Samosa,samosa
+Kachori,kachori
+Pakora,onion_pakora
+Dahi vada,dahi_vada
+Dumpling,veg_momos
+Chow mein,veg_hakka_noodles
+Lo mein,veg_hakka_noodles
+Shawarma,chicken_shawarma
+Neapolitan pizza,margherita_pizza
+New York-style pizza,margherita_pizza
+California-style pizza,veg_pizza
+Veggie burger,veg_burger
+Chicken sandwich,chicken_burger
+Fried chicken,fried_chicken
+Chicken nugget,chicken_nuggets
+Hot dog,hot_dog
+Carbonara,white_sauce_pasta
+Spaghetti,spaghetti_bolognese
+Lasagne,lasagna
+Macaroni and cheese,mac_and_cheese
+Club sandwich,club_sandwich
+Taco,tacos
+Burrito,burrito
+Nachos,nachos
+Sushi,sushi
+Ramen,ramen
+Green curry,thai_green_curry
+Pad thai,pad_thai
+Garden salad,green_salad
+Greek salad,green_salad
+Cobb salad,chicken_salad
+Kosambari,kachumber
+Pancake,pancakes
+Waffle,waffles
+Raita,raita
+Gulab jamun,gulab_jamun
+Rasgulla,rasgulla
+Ras malai,rasmalai
+Jalebi,jalebi
+Chhena jalebi,jalebi
+Kheer,kheer
+Rice pudding,kheer
+Boondi,motichoor_ladoo
+Kaju katli,kaju_katli
+Barfi,barfi
+Sandesh,sandesh
+Mysore pak,mysore_pak
+Modak,modak
+Shrikhand,shrikhand
+Kulfi,kulfi
+Chocolate brownie,brownie
+Cheesecake,cake_slice

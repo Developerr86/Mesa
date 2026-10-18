@@ -1,0 +1,242 @@
+id,name,category,cuisine,diet,portion_unit,portion_g,visual_group
+roti,Roti / Chapati,bread,north_indian,veg,piece,40,flatbread_plain
+phulka,Phulka,bread,north_indian,veg,piece,30,flatbread_plain
+tandoori_roti,Tandoori Roti,bread,north_indian,veg,piece,60,flatbread_plain
+plain_paratha,Plain Paratha,bread,north_indian,veg,piece,80,paratha
+aloo_paratha,Aloo Paratha,bread,north_indian,veg,piece,120,paratha
+gobi_paratha,Gobi Paratha,bread,north_indian,veg,piece,120,paratha
+paneer_paratha,Paneer Paratha,bread,north_indian,veg,piece,120,paratha
+methi_thepla,Methi Thepla,bread,gujarati,veg,piece,50,paratha
+lachha_paratha,Lachha Paratha,bread,north_indian,veg,piece,90,paratha
+plain_naan,Plain Naan,bread,north_indian,veg,piece,90,naan
+butter_naan,Butter Naan,bread,north_indian,veg,piece,100,naan
+garlic_naan,Garlic Naan,bread,north_indian,veg,piece,100,naan
+kulcha,Amritsari Kulcha,bread,punjabi,veg,piece,120,naan
+puri,Puri,bread,north_indian,veg,piece,25,puri
+bhatura,Bhatura,bread,punjabi,veg,piece,70,puri
+makki_roti,Makki di Roti,bread,punjabi,veg,piece,60,flatbread_plain
+bajra_roti,Bajra / Jowar Roti (Bhakri),bread,maharashtrian,veg,piece,60,flatbread_plain
+appam,Appam,bread,kerala,veg,piece,60,appam
+kerala_parotta,Kerala Parotta,bread,kerala,veg,piece,90,paratha
+steamed_rice,Steamed Rice,rice,pan_indian,veg,bowl,150,rice_plain
+jeera_rice,Jeera Rice,rice,north_indian,veg,bowl,150,rice_plain
+veg_pulao,Veg Pulao,rice,north_indian,veg,plate,250,rice_mixed
+lemon_rice,Lemon Rice,rice,south_indian,veg,plate,200,rice_yellow
+curd_rice,Curd Rice,rice,south_indian,veg,bowl,200,rice_white_mixed
+tamarind_rice,Puliyogare / Tamarind Rice,rice,south_indian,veg,plate,200,rice_mixed
+bisi_bele_bath,Bisi Bele Bath,rice,karnataka,veg,bowl,250,khichdi
+khichdi,Khichdi,rice,pan_indian,veg,bowl,250,khichdi
+veg_biryani,Veg Biryani,rice,pan_indian,veg,plate,300,biryani
+chicken_biryani,Chicken Biryani,rice,pan_indian,non_veg,plate,350,biryani
+mutton_biryani,Mutton Biryani,rice,pan_indian,non_veg,plate,350,biryani
+egg_biryani,Egg Biryani,rice,pan_indian,egg,plate,300,biryani
+hyderabadi_biryani,Hyderabadi Chicken Biryani,rice,hyderabadi,non_veg,plate,350,biryani
+kolkata_biryani,Kolkata Biryani,rice,bengali,non_veg,plate,350,biryani
+prawn_biryani,Prawn Biryani,rice,coastal,non_veg,plate,300,biryani
+dal_tadka,Dal Tadka,dal,north_indian,veg,katori,150,dal_yellow
+dal_fry,Dal Fry,dal,north_indian,veg,katori,150,dal_yellow
+moong_dal,Moong Dal,dal,pan_indian,veg,katori,150,dal_yellow
+toor_dal,Toor Dal / Varan,dal,maharashtrian,veg,katori,150,dal_yellow
+gujarati_dal,Gujarati Dal,dal,gujarati,veg,katori,150,dal_yellow
+masoor_dal,Masoor Dal,dal,north_indian,veg,katori,150,dal_yellow
+dal_makhani,Dal Makhani,dal,punjabi,veg,katori,150,dal_dark
+rajma,Rajma,dal,punjabi,veg,katori,150,rajma
+chole,Chole / Chana Masala,dal,punjabi,veg,katori,150,chole
+kadhi,Kadhi Pakora,dal,north_indian,veg,katori,150,kadhi
+sambar,Sambar,dal,south_indian,veg,katori,150,sambar
+rasam,Rasam,dal,south_indian,veg,katori,150,rasam
+dal_baati,Dal Baati,dal,rajasthani,veg,plate,300,dal_baati
+aloo_gobi,Aloo Gobi,veg_curry,north_indian,veg,katori,150,dry_sabzi_yellow
+aloo_matar,Aloo Matar,veg_curry,north_indian,veg,katori,150,veg_red_gravy
+jeera_aloo,Jeera Aloo,veg_curry,north_indian,veg,katori,150,dry_sabzi_yellow
+aloo_sabzi,Aloo Sabzi (Puri wali),veg_curry,north_indian,veg,katori,150,veg_red_gravy
+bhindi_masala,Bhindi Masala,veg_curry,north_indian,veg,katori,120,bhindi
+baingan_bharta,Baingan Bharta,veg_curry,punjabi,veg,katori,150,bharta
+mix_veg,Mixed Veg Curry,veg_curry,north_indian,veg,katori,150,veg_red_gravy
+veg_kurma,Veg Kurma,veg_curry,south_indian,veg,katori,150,veg_white_gravy
+malai_kofta,Malai Kofta,veg_curry,north_indian,veg,katori,150,veg_red_gravy
+cabbage_sabzi,Cabbage / Patta Gobi Sabzi,veg_curry,pan_indian,veg,katori,120,dry_sabzi_green
+beans_poriyal,Beans Poriyal / Thoran,veg_curry,south_indian,veg,katori,120,dry_sabzi_green
+lauki_sabzi,Lauki / Dudhi Sabzi,veg_curry,north_indian,veg,katori,150,dry_sabzi_green
+methi_aloo,Methi Aloo,veg_curry,north_indian,veg,katori,120,dry_sabzi_green
+sarson_saag,Sarson da Saag,veg_curry,punjabi,veg,katori,150,green_gravy
+avial,Avial,veg_curry,kerala,veg,katori,150,veg_white_gravy
+undhiyu,Undhiyu,veg_curry,gujarati,veg,katori,150,veg_red_gravy
+pav_bhaji_bhaji,Bhaji (Pav Bhaji),veg_curry,maharashtrian,veg,katori,200,pav_bhaji
+misal,Misal,veg_curry,maharashtrian,veg,bowl,250,misal
+soya_chunks_curry,Soya Chunks Curry,veg_curry,north_indian,veg,katori,150,veg_red_gravy
+mushroom_masala,Mushroom Masala,veg_curry,north_indian,veg,katori,150,veg_red_gravy
+paneer_butter_masala,Paneer Butter Masala,paneer,north_indian,veg,katori,150,paneer_red_gravy
+shahi_paneer,Shahi Paneer,paneer,north_indian,veg,katori,150,paneer_red_gravy
+kadai_paneer,Kadai Paneer,paneer,north_indian,veg,katori,150,paneer_red_gravy
+matar_paneer,Matar Paneer,paneer,north_indian,veg,katori,150,paneer_red_gravy
+palak_paneer,Palak Paneer,paneer,north_indian,veg,katori,150,green_gravy
+paneer_bhurji,Paneer Bhurji,paneer,north_indian,veg,katori,120,bhurji
+paneer_tikka,Paneer Tikka,paneer,north_indian,veg,plate,200,paneer_tikka
+chilli_paneer,Chilli Paneer,paneer,indo_chinese,veg,plate,200,indo_chinese_dry
+butter_chicken,Butter Chicken,chicken,punjabi,non_veg,katori,180,chicken_red_gravy
+chicken_tikka_masala,Chicken Tikka Masala,chicken,north_indian,non_veg,katori,180,chicken_red_gravy
+chicken_curry,Chicken Curry (Home Style),chicken,pan_indian,non_veg,katori,180,chicken_red_gravy
+kadai_chicken,Kadai Chicken,chicken,north_indian,non_veg,katori,180,chicken_red_gravy
+chicken_korma,Chicken Korma,chicken,mughlai,non_veg,katori,180,chicken_white_gravy
+chicken_chettinad,Chicken Chettinad,chicken,tamil,non_veg,katori,180,chicken_red_gravy
+chicken_65,Chicken 65,chicken,south_indian,non_veg,plate,200,fried_chicken_pieces
+chicken_tikka,Chicken Tikka,chicken,north_indian,non_veg,plate,200,tandoori_chicken
+tandoori_chicken,Tandoori Chicken,chicken,punjabi,non_veg,half,350,tandoori_chicken
+chicken_seekh_kebab,Chicken Seekh Kebab,chicken,mughlai,non_veg,piece,50,seekh_kebab
+chilli_chicken,Chilli Chicken,chicken,indo_chinese,non_veg,plate,200,indo_chinese_dry
+mutton_curry,Mutton Curry,mutton,pan_indian,non_veg,katori,180,mutton_gravy
+rogan_josh,Rogan Josh,mutton,kashmiri,non_veg,katori,180,mutton_gravy
+mutton_keema,Mutton Keema,mutton,north_indian,non_veg,katori,150,keema
+mutton_seekh_kebab,Mutton Seekh Kebab,mutton,mughlai,non_veg,piece,50,seekh_kebab
+galouti_kebab,Galouti Kebab,mutton,awadhi,non_veg,piece,40,shami_kebab
+shami_kebab,Shami Kebab,mutton,mughlai,non_veg,piece,50,shami_kebab
+nihari,Nihari,mutton,mughlai,non_veg,bowl,250,mutton_gravy
+haleem,Haleem,mutton,hyderabadi,non_veg,bowl,250,haleem
+fish_curry,Fish Curry,seafood,coastal,non_veg,katori,180,fish_curry
+goan_fish_curry,Goan Fish Curry,seafood,goan,non_veg,katori,180,fish_curry
+macher_jhol,Macher Jhol,seafood,bengali,non_veg,katori,180,fish_curry
+fish_fry,Fish Fry,seafood,coastal,non_veg,piece,100,fish_fry
+prawn_masala,Prawn Masala,seafood,coastal,non_veg,katori,150,prawn_gravy
+egg_curry,Egg Curry,egg,pan_indian,egg,katori,180,egg_curry
+egg_bhurji,Egg Bhurji,egg,pan_indian,egg,plate,150,bhurji
+masala_omelette,Masala Omelette,egg,pan_indian,egg,piece,120,omelette
+plain_omelette,Plain Omelette,egg,global,egg,piece,110,omelette
+boiled_egg,Boiled Egg,egg,global,egg,piece,50,boiled_egg
+fried_egg,Fried Egg / Half Fry,egg,global,egg,piece,50,fried_egg
+bread_omelette,Bread Omelette,egg,street,egg,plate,180,sandwich
+idli,Idli,south_indian_breakfast,south_indian,veg,piece,40,idli
+plain_dosa,Plain Dosa,south_indian_breakfast,south_indian,veg,piece,100,dosa
+masala_dosa,Masala Dosa,south_indian_breakfast,south_indian,veg,piece,180,dosa
+rava_dosa,Rava Dosa,south_indian_breakfast,south_indian,veg,piece,120,dosa
+set_dosa,Set Dosa,south_indian_breakfast,karnataka,veg,piece,80,uttapam
+uttapam,Uttapam,south_indian_breakfast,south_indian,veg,piece,150,uttapam
+medu_vada,Medu Vada,south_indian_breakfast,south_indian,veg,piece,50,medu_vada
+upma,Upma,south_indian_breakfast,south_indian,veg,bowl,200,upma
+pongal,Ven Pongal,south_indian_breakfast,tamil,veg,bowl,200,khichdi
+pesarattu,Pesarattu,south_indian_breakfast,andhra,veg,piece,120,dosa
+puttu,Puttu,south_indian_breakfast,kerala,veg,piece,150,puttu
+coconut_chutney,Coconut Chutney,side,south_indian,veg,tbsp,30,chutney_white
+poha,Poha,north_breakfast,maharashtrian,veg,plate,180,poha
+sabudana_khichdi,Sabudana Khichdi,north_breakfast,maharashtrian,veg,plate,180,sabudana
+dhokla,Dhokla,north_breakfast,gujarati,veg,piece,40,dhokla
+khandvi,Khandvi,north_breakfast,gujarati,veg,plate,120,khandvi
+besan_chilla,Besan Chilla,north_breakfast,north_indian,veg,piece,80,chilla
+moong_dal_chilla,Moong Dal Chilla,north_breakfast,north_indian,veg,piece,80,chilla
+chole_bhature,Chole Bhature,north_breakfast,punjabi,veg,plate,400,chole_bhature
+puri_bhaji,Puri Bhaji,north_breakfast,north_indian,veg,plate,300,puri_bhaji
+bread_butter,Bread Butter / Toast,north_breakfast,global,veg,slice,35,toast
+oats_porridge,Oats Porridge,north_breakfast,global,veg,bowl,250,porridge
+cornflakes_milk,Cornflakes with Milk,north_breakfast,global,veg,bowl,250,cereal
+samosa,Samosa,snack,north_indian,veg,piece,70,samosa
+kachori,Kachori,snack,rajasthani,veg,piece,60,kachori
+onion_pakora,Onion Pakora / Bhajiya,snack,pan_indian,veg,plate,100,pakora
+aloo_tikki,Aloo Tikki,snack,north_indian,veg,piece,70,tikki
+vada_pav,Vada Pav,snack,maharashtrian,veg,piece,150,vada_pav
+pav_bhaji,Pav Bhaji,snack,maharashtrian,veg,plate,300,pav_bhaji
+dabeli,Dabeli,snack,gujarati,veg,piece,120,vada_pav
+pani_puri,Pani Puri / Golgappa,chaat,street,veg,plate,120,pani_puri
+bhel_puri,Bhel Puri,chaat,street,veg,plate,150,bhel
+sev_puri,Sev Puri,chaat,street,veg,plate,120,sev_puri
+dahi_puri,Dahi Puri,chaat,street,veg,plate,150,sev_puri
+papdi_chaat,Papdi Chaat,chaat,street,veg,plate,150,chaat_dahi
+dahi_vada,Dahi Vada / Dahi Bhalla,chaat,north_indian,veg,plate,150,chaat_dahi
+samosa_chaat,Samosa Chaat,chaat,street,veg,plate,200,chaat_dahi
+ragda_pattice,Ragda Pattice,chaat,maharashtrian,veg,plate,200,chaat_dahi
+veg_momos,Veg Momos (Steamed),snack,tibetan,veg,plate,180,momos
+chicken_momos,Chicken Momos (Steamed),snack,tibetan,non_veg,plate,180,momos
+fried_momos,Fried Momos,snack,tibetan,veg,plate,180,momos_fried
+veg_sandwich,Veg Sandwich,snack,street,veg,piece,150,sandwich
+grilled_sandwich,Grilled Cheese Sandwich,snack,street,veg,piece,170,sandwich
+kathi_roll_chicken,Chicken Kathi Roll,snack,bengali,non_veg,piece,200,roll_wrap
+kathi_roll_paneer,Paneer Kathi Roll,snack,bengali,veg,piece,200,roll_wrap
+egg_roll,Egg Roll,snack,bengali,egg,piece,180,roll_wrap
+chicken_shawarma,Chicken Shawarma,snack,middle_eastern,non_veg,piece,250,roll_wrap
+maggi,Maggi / Instant Noodles,snack,pan_indian,veg,bowl,250,noodles_instant
+banana_chips,Banana Chips,snack,kerala,veg,handful,30,chips
+namkeen,Namkeen / Bhujia,snack,pan_indian,veg,handful,30,namkeen
+roasted_peanuts,Roasted Peanuts / Chana,snack,pan_indian,veg,handful,30,nuts
+veg_hakka_noodles,Veg Hakka Noodles,indo_chinese,indo_chinese,veg,plate,250,noodles
+chicken_hakka_noodles,Chicken Hakka Noodles,indo_chinese,indo_chinese,non_veg,plate,250,noodles
+schezwan_noodles,Schezwan Noodles,indo_chinese,indo_chinese,veg,plate,250,noodles
+veg_fried_rice,Veg Fried Rice,indo_chinese,indo_chinese,veg,plate,250,fried_rice
+chicken_fried_rice,Chicken Fried Rice,indo_chinese,indo_chinese,non_veg,plate,250,fried_rice
+egg_fried_rice,Egg Fried Rice,indo_chinese,indo_chinese,egg,plate,250,fried_rice
+veg_manchurian,Veg Manchurian (Gravy),indo_chinese,indo_chinese,veg,bowl,200,manchurian
+gobi_manchurian,Gobi Manchurian (Dry),indo_chinese,indo_chinese,veg,plate,200,indo_chinese_dry
+spring_rolls,Spring Rolls,indo_chinese,indo_chinese,veg,piece,50,spring_roll
+hot_sour_soup,Hot and Sour Soup,indo_chinese,indo_chinese,veg,bowl,250,soup_dark
+sweet_corn_soup,Sweet Corn Soup,indo_chinese,indo_chinese,veg,bowl,250,soup_light
+margherita_pizza,Margherita Pizza,pizza,italian,veg,slice,100,pizza
+veg_pizza,Veggie Pizza,pizza,italian,veg,slice,110,pizza
+chicken_pizza,Chicken Pizza,pizza,italian,non_veg,slice,110,pizza
+pepperoni_pizza,Pepperoni Pizza,pizza,italian,non_veg,slice,110,pizza
+veg_burger,Veg Burger (Aloo Tikki),burger,fast_food,veg,piece,180,burger
+chicken_burger,Chicken Burger,burger,fast_food,non_veg,piece,200,burger
+french_fries,French Fries,fast_food,fast_food,veg,medium,115,fries
+fried_chicken,Fried Chicken,fast_food,fast_food,non_veg,piece,120,fried_chicken_pieces
+chicken_nuggets,Chicken Nuggets,fast_food,fast_food,non_veg,piece,17,fried_chicken_pieces
+hot_dog,Hot Dog,fast_food,american,non_veg,piece,150,hot_dog
+white_sauce_pasta,White Sauce Pasta,pasta,italian,veg,plate,250,pasta_white
+red_sauce_pasta,Red Sauce Pasta (Arrabbiata),pasta,italian,veg,plate,250,pasta_red
+spaghetti_bolognese,Spaghetti Bolognese,pasta,italian,non_veg,plate,300,pasta_red
+mac_and_cheese,Mac and Cheese,pasta,american,veg,bowl,250,pasta_white
+lasagna,Lasagna,pasta,italian,non_veg,piece,250,lasagna
+garlic_bread,Garlic Bread,bread,italian,veg,piece,40,garlic_bread
+club_sandwich,Club Sandwich,sandwich,global,non_veg,piece,250,sandwich
+subway_sub,Sub Sandwich,sandwich,global,non_veg,6_inch,230,sub
+tacos,Tacos,mexican,mexican,non_veg,piece,100,tacos
+burrito,Burrito,mexican,mexican,non_veg,piece,300,roll_wrap
+nachos,Nachos,mexican,mexican,veg,plate,150,nachos
+sushi,Sushi,japanese,japanese,non_veg,piece,30,sushi
+ramen,Ramen,japanese,japanese,non_veg,bowl,500,ramen
+thai_green_curry,Thai Green Curry,thai,thai,non_veg,bowl,250,thai_curry
+pad_thai,Pad Thai,thai,thai,non_veg,plate,300,noodles
+caesar_salad,Caesar Salad,salad,global,non_veg,bowl,200,salad_leafy
+green_salad,Green Salad,salad,global,veg,bowl,100,salad_leafy
+chicken_salad,Grilled Chicken Salad,salad,global,non_veg,bowl,250,salad_leafy
+kachumber,Kachumber Salad,salad,north_indian,veg,katori,100,salad_chopped
+fruit_bowl,Fruit Bowl,fruit,global,veg,bowl,200,fruit_bowl
+avocado_toast,Avocado Toast,breakfast,global,veg,slice,150,toast
+pancakes,Pancakes,breakfast,american,veg,piece,75,pancakes
+waffles,Waffles,breakfast,american,veg,piece,75,waffles
+curd,Curd / Dahi,side,pan_indian,veg,katori,150,curd
+raita,Raita,side,pan_indian,veg,katori,150,curd
+papad,Papad,side,pan_indian,veg,piece,15,papad
+pickle,Achar / Pickle,side,pan_indian,veg,tbsp,15,pickle
+green_chutney,Green Chutney,side,pan_indian,veg,tbsp,30,chutney_green
+veg_thali,Veg Thali,thali,pan_indian,veg,plate,700,thali
+nonveg_thali,Non-Veg Thali,thali,pan_indian,non_veg,plate,800,thali
+south_indian_meals,South Indian Meals (Banana Leaf),thali,south_indian,veg,plate,700,thali
+gulab_jamun,Gulab Jamun,sweet,north_indian,veg,piece,50,gulab_jamun
+rasgulla,Rasgulla,sweet,bengali,veg,piece,50,rasgulla
+rasmalai,Rasmalai,sweet,bengali,veg,piece,60,rasmalai
+jalebi,Jalebi,sweet,north_indian,veg,plate,100,jalebi
+gajar_halwa,Gajar ka Halwa,sweet,north_indian,veg,katori,100,halwa
+sooji_halwa,Sooji Halwa / Sheera,sweet,north_indian,veg,katori,100,halwa
+kheer,Kheer / Payasam,sweet,pan_indian,veg,katori,150,kheer
+besan_ladoo,Besan Ladoo,sweet,north_indian,veg,piece,40,ladoo
+motichoor_ladoo,Motichoor / Boondi Ladoo,sweet,north_indian,veg,piece,40,ladoo
+kaju_katli,Kaju Katli,sweet,north_indian,veg,piece,15,barfi
+barfi,Barfi,sweet,north_indian,veg,piece,30,barfi
+sandesh,Sandesh,sweet,bengali,veg,piece,30,barfi
+mysore_pak,Mysore Pak,sweet,karnataka,veg,piece,40,barfi
+modak,Modak,sweet,maharashtrian,veg,piece,50,modak
+shrikhand,Shrikhand,sweet,maharashtrian,veg,katori,100,shrikhand
+kulfi,Kulfi,dessert,north_indian,veg,piece,70,kulfi
+ice_cream,Ice Cream,dessert,global,veg,scoop,65,ice_cream
+brownie,Brownie,dessert,global,egg,piece,60,cake
+cake_slice,Cake / Pastry,dessert,global,egg,slice,80,cake
+masala_chai,Masala Chai,beverage,pan_indian,veg,cup,150,tea
+filter_coffee,Filter Coffee,beverage,south_indian,veg,cup,150,coffee
+cold_coffee,Cold Coffee,beverage,global,veg,glass,300,cold_coffee
+cappuccino,Cappuccino / Latte,beverage,global,veg,cup,240,coffee
+sweet_lassi,Sweet Lassi,beverage,punjabi,veg,glass,250,lassi
+mango_lassi,Mango Lassi,beverage,punjabi,veg,glass,250,lassi
+chaas,Chaas / Buttermilk,beverage,pan_indian,veg,glass,250,chaas
+nimbu_pani,Nimbu Pani / Lemonade,beverage,pan_indian,veg,glass,250,juice_clear
+fresh_juice,Fresh Fruit Juice,beverage,global,veg,glass,250,juice
+mango_shake,Mango Milkshake,beverage,global,veg,glass,300,milkshake
+banana_shake,Banana Milkshake,beverage,global,veg,glass,300,milkshake
+coconut_water,Tender Coconut Water,beverage,south_indian,veg,glass,250,coconut
+haldi_doodh,Haldi Doodh / Turmeric Milk,beverage,pan_indian,veg,glass,200,milk
