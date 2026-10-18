@@ -1,6 +1,6 @@
 # Mesa — Agent Handoff
 
-Last updated: July 10, 2026
+Last updated: October 18, 2026
 
 ## Start here
 
@@ -9,6 +9,7 @@ Read these files before changing the app:
 1. `AGENTS.md` — requires using the exact Expo SDK 57 documentation before writing code.
 2. `Mesa-build.md` — product vision, roadmap, Phase 0 scope, and technical direction.
 3. `DESIGN.md` — Mesa's visual identity and the Surface Sheet interaction model.
+4. `data/food-db/README.md` — the food database, nutrition sources, the on-device classifier and their licences.
 
 The authoritative Expo reference for this repository is:
 
@@ -22,116 +23,115 @@ Mesa is a local-first food journal. Its Phase 0 product loop is:
 Open → Capture food → Confirm details → Save → Browse history
 ```
 
-The long-term product may add smarter logging, vision, personal insights, and meal recommendations, but those are explicitly later phases. The current priority is a polished, low-friction journal and photo history.
+That loop now works end to end. The roadmap originally kept AI out of Phase 0; the product owner chose to add a small **on-device** classifier that only pre-fills the details form (the app still works fully without it). Accounts, cloud sync, VLMs, recommendations and social features remain out of scope.
 
 ## Current implementation
 
-The application currently implements the visual foundation and empty home state only:
+**Home** — dynamic date; headline driven by saved meals ("3 meals on the table today."); Meal History sheet with a two-column photo grid (newest first, dish name + time).
 
-- The home canvas uses Mesa's warm near-black tone.
-- The date is generated from the device's current date; no date text is hard-coded.
-- A first-use empty state replaces the old mock meal count and spending summary.
-- The Surface Sheet starts at its Peek snap point and can be dragged to Revealed or Expanded.
-- The sheet contains a deliberate empty-history state.
-- Reanimated drives the sheet position and corner-radius interpolation.
-- Gesture Handler handles dragging, and Expo Haptics ticks across snap states.
-- There is no meal persistence, camera flow, meal creation, or navigation yet.
-- The three food images under `assets/` are currently unused legacy mock assets.
+**Capture** — `expo-camera` viewfinder with shutter animation, flash and haptics; preview with Retake / Confirm. In development builds on emulators/simulators (`__DEV__ && !Device.isDevice`) the shutter returns bundled sample food photos instead, because virtual cameras only produce black frames.
 
-The Expo Go settings gear is not rendered by Mesa. It is development chrome injected by Expo Go. It cannot be removed from React Native application code. It will not appear in a standalone/native Mesa build.
+**Details sheet** — after Confirm, the photo sits on the canvas and a Surface Sheet holds the form:
+- dish search over the food database (or "Use '…'" for a custom name)
+- portion chips (counts for pieces/glasses, ½–2 for katoris/bowls/plates) and a live nutrition estimate
+- meal type pre-selected from the time of day; Home-cooked / Takeout / Dine-out (+ place); cost (₹, optional); notes
+- Save is pinned beside the title; ✕ discards; Retake returns to the camera
+
+**On-device recognition** — on Confirm, the photo is center-cropped to 192×192 and run through Google's AIY food_V1 TFLite classifier (`react-native-fast-tflite`). Top guess ≥ 50% and mapped to a dish → pre-filled ("Recognised on this phone"); 10–50% → suggestion chips; all < 10% → "Couldn't recognise a dish". Unavailable in Expo Go (recognition quietly returns null).
+
+**Storage** — SQLite (`mesa.db`, schema v3) via `SQLiteProvider`. Photos are copied from the cache into `Paths.document/meal-photos/`; only the file name is stored. Each meal stores a snapshot of its nutrition and the classifier's top guess + confidence (training data for later).
 
 ## File map
 
 ```text
-App.tsx
-  Wraps the app in GestureHandlerRootView and renders HomeScreen.
-
-src/theme.ts
-  Shared colors, type sizes/weights, spacing, and device-radius token.
-
-src/components/SurfaceSheet.tsx
-  Gesture-driven Peek/Revealed/Expanded sheet with spring motion,
-  haptics, and radius interpolation.
-
-src/features/home/HomeScreen.tsx
-  Dynamic date, empty canvas state, and empty meal-history state.
-
-app.json
-  Expo config. Android application ID: com.mesa.foodjournal.
+App.tsx                               SQLiteProvider + screen switch (home / capture / details)
+metro.config.js                       Bundles .tflite assets
+src/theme.ts                          Colors, type, spacing, device radius
+src/components/
+  SurfaceSheet.tsx                    Peek/Revealed/Expanded sheet; initialSnap, ref.snapTo,
+                                      dragFromHeaderOnly, titleAccessory, onExpandedChange
+  screen.ts                           SCREEN_HEIGHT (true drawable height; see gotchas)
+  CloseGlyph.tsx
+src/features/
+  home/HomeScreen.tsx                 Date, headline, history sheet
+  history/MealHistoryGrid.tsx         Photo grid
+  capture/CaptureScreen.tsx           Camera, preview, warms up the classifier
+  capture/devSamplePhoto.ts           Emulator sample photos
+  details/MealDetailsScreen.tsx       The details form + recognition UI
+  meals/mealStore.ts                  Schema, migrations, saveMeal/listMeals, MealDetails type
+  meals/useMeals.ts                   Loads/adds meals
+  foods/foodDb.ts                     Search, portions, nutrition math
+  foods/foods.json                    GENERATED food database (241 dishes)
+  recognition/recognizeFood.ts        Model load, preprocessing, suggestions
+  recognition/modelLabels.json        GENERATED model output index → [label, dish id]
+assets/models/food_v1.tflite          AIY food_V1 (20 MB, Apache-2.0)
+data/food-db/                         Food database source data and build script (see its README)
 ```
+
+`foods.json` and `modelLabels.json` are generated — edit `data/food-db/` and run `build_nutrition.py` instead.
 
 ## Toolchain and dependencies
 
-- Expo SDK `~57.0.4`
-- React Native `0.86.0`
-- React `19.2.3`
-- TypeScript `~6.0.3`
-- React Native Reanimated `4.5.0`
-- React Native Worklets `0.10.0`
-- React Native Gesture Handler `~2.32.0`
-- Expo Camera, Haptics, Image, SQLite, and Status Bar SDK 57 packages
-
-`react-native-worklets` must stay pinned to `0.10.0`. Expo Go crashed in native Worklets/Hermes code when the transitive `0.10.2` package was used. SDK 57's bundled module list pins Worklets to `0.10.0`.
+- Expo SDK `~57.0.30`, React Native `0.86.3`, React `19.2.3`, TypeScript `~6.0.3`
+- Reanimated `4.5.1` + Worklets `0.10.1` (current SDK 57 pins — the old `0.10.0` pin crashed newer Expo Go builds; keep these matched to `npx expo install --fix`)
+- Gesture Handler `~2.32.0`
+- expo-camera, -haptics, -image, -sqlite, -file-system, -asset, -device, -image-manipulator, -status-bar, -dev-client
+- `react-native-fast-tflite` + `react-native-nitro-modules`, `jpeg-js`
+- **Android builds need JDK 17.** JDK 24+ (including Android Studio's bundled JDK 25) fails in `configureCMake` because prefab prints a "restricted method" warning that AGP treats as an error. Temurin 17 is installed per-user at `~/Library/Java/JavaVirtualMachines/jdk-17.0.20.1+1`.
 
 ## Running the app
 
-Install dependencies:
+Mesa uses native modules (TFLite), so it runs as an **Expo development build**. Expo Go still opens it, without recognition.
 
-```powershell
-npm.cmd install
+Build and install on the Pixel 5 (USB) — only needed when native dependencies change:
+
+```bash
+JAVA_HOME="$HOME/Library/Java/JavaVirtualMachines/jdk-17.0.20.1+1/Contents/Home" ANDROID_HOME=~/Library/Android/sdk npx expo run:android --device Pixel_5
 ```
+
+Day to day, start the dev server and connect the phone over USB:
+
+```bash
+adb reverse tcp:8081 tcp:8081
+npx expo start --dev-client --port 8081
+```
+
+The Android emulator `TheSystemTest` (arm64) can run the same debug APK (`adb -s emulator-5554 install -r android/app/build/outputs/apk/debug/app-debug.apk`). Another app on that emulator (`com.appscelestial.thesystem`) can come to the front when Expo Go/Mesa is force-stopped; launch Mesa explicitly.
 
 Type-check:
 
-```powershell
-npx.cmd tsc --noEmit
+```bash
+npx tsc --noEmit
 ```
 
-Run in Expo Go:
+Rebuild the food database / label map after editing `data/food-db/`:
 
-```powershell
-npm.cmd start -- --port 8082
+```bash
+python3 data/food-db/build_nutrition.py /path/to/usda-download-folder
 ```
 
-Port `8081` was occupied on the development machine by an unrelated Expo SDK 54 project. Opening that server in Expo Go produces a misleading SDK mismatch message. Mesa resolves to SDK `57.0.0` and was successfully verified on a Pixel 5 running Android 14 through port `8082`.
+`android/` and `ios/` are generated by prebuild and git-ignored. iOS has not been built since the native dependencies were added.
 
-For USB access to port 8082:
+## Gotchas
 
-```powershell
-& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" reverse tcp:8082 tcp:8082
-```
+- **Screen height:** on edge-to-edge Android, `Dimensions.get('window')` excludes the system bars. Use `SCREEN_HEIGHT` from `src/components/screen.ts` for full-screen layout, or the sheet's Expanded state stops short of the top.
+- **Migrations:** add a new entry to `MIGRATIONS` in `mealStore.ts`; never edit an existing one. Each step runs in a transaction with its `user_version` bump.
+- **Classifier limits:** no "not food" signal (its background class never fires — low confidence is the only hint); no labels for dosa, naan, roti or plain dal; no drinks; one label per photo.
+- **Dev menu button:** development builds show a floating gear top-right that overlaps the Retake button. It is not present in release builds.
 
-Then open `exp://127.0.0.1:8082` in Expo Go.
+## Next work
 
-## Native Android build status
+1. Test recognition on real meals with the phone and tune the 50% / 10% thresholds.
+2. Meal detail page (tap a history tile): view and edit all fields, delete a meal.
+3. Barcode scanning for packaged food (`expo-camera` barcode scanning + Open Food Facts lookup, cached locally, queued when offline).
+4. Retrain a classifier on the dish list's `visual_group`s (plus "not food" / "packaged"), using saved predictions vs. user corrections.
+5. Make the history grid scroll inside the sheet (use `dragFromHeaderOnly` + a ScrollView, as the details sheet does).
+6. Automated tests (food search/portions, migrations, suggestion ranking), accessibility, reduced motion, iOS build.
+7. Decide whether `assets/models/food_v1.tflite` (20 MB) should move to Git LFS.
 
-`npx expo prebuild` generated an `android/` directory locally. The directory is intentionally ignored by `.gitignore`, so it is not part of the repository and can be regenerated from `app.json`.
+## Last verification (October 18, 2026)
 
-A local release build was started to demonstrate the app without Expo Go's settings gear, but the long first Gradle compilation was cancelled before it produced an APK. Do not assume a release APK exists. To retry:
-
-```powershell
-$env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
-$env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
-$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
-npx.cmd expo run:android --variant release --no-bundler
-```
-
-## Known limitations and next work
-
-1. Implement the camera capture flow with `expo-camera`.
-2. Define a Meal data model and persist it locally with `expo-sqlite`.
-3. Replace the always-empty home screen with data-driven empty and populated states.
-4. Add the confirm-details Surface Sheet after capture.
-5. Add an actual history gallery and meal-detail state.
-6. Add automated tests for date formatting, empty states, and Surface Sheet behavior.
-7. Test accessibility, reduced motion, smaller screens, and iOS safe areas.
-
-Keep Phase 0 narrow. Do not add accounts, cloud sync, AI, calorie tracking, recommendations, or social features yet.
-
-## Last verification
-
-- `npx tsc --noEmit` passed after the empty-state implementation.
-- Expo config resolved to SDK `57.0.0`.
-- Mesa rendered successfully on the connected Pixel 5.
-- The dynamic date displayed correctly as `Friday, July` on July 10, 2026.
-- The empty canvas and Meal History sheet rendered without a runtime crash.
+- `npx tsc --noEmit` passes.
+- Pixel 5 (Android 14), development build: home, camera, details sheet and recognition run; a non-food photo shows "Couldn't recognise a dish".
+- Emulator, same build: sample ramen photo recognised at 94% and pre-filled (≈ 635 kcal / bowl), saved without errors; fresh install migrated 0 → 3.
+- Expo Go on the emulator: v1 → v2 migration kept existing meals; full capture → details → save → history flow verified.
