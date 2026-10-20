@@ -4,6 +4,7 @@ import { SQLiteProvider } from 'expo-sqlite';
 import { HomeScreen } from './src/features/home/HomeScreen';
 import { CaptureScreen } from './src/features/capture/CaptureScreen';
 import { MealDetailsScreen } from './src/features/details/MealDetailsScreen';
+import { MealScreen } from './src/features/meal/MealScreen';
 import { DATABASE_NAME, migrateDbIfNeeded } from './src/features/meals/mealStore';
 import { useMeals } from './src/features/meals/useMeals';
 
@@ -17,12 +18,19 @@ export default function App() {
   );
 }
 
-type Screen = { name: 'home' } | { name: 'capture' } | { name: 'details'; photoUri: string };
+type Screen =
+  | { name: 'home' }
+  | { name: 'capture' }
+  | { name: 'details'; photoUri: string }
+  | { name: 'meal'; mealId: number }
+  | { name: 'edit'; mealId: number };
 
 function Mesa() {
   const [screen, setScreen] = React.useState<Screen>({ name: 'home' });
-  const { meals, addMeal } = useMeals();
+  const { meals, addMeal, editMeal, removeMeal } = useMeals();
   const goHome = () => setScreen({ name: 'home' });
+  const selectedMeal =
+    screen.name === 'meal' || screen.name === 'edit' ? meals.find((meal) => meal.id === screen.mealId) : undefined;
 
   switch (screen.name) {
     case 'capture':
@@ -38,13 +46,45 @@ function Mesa() {
           photoUri={screen.photoUri}
           onCancel={goHome}
           onRetake={() => setScreen({ name: 'capture' })}
-          onSave={(details) => {
-            addMeal(screen.photoUri, details);
+          onSave={(details, capturedAt) => {
+            addMeal(screen.photoUri, details, capturedAt);
             goHome();
           }}
         />
       );
-    default:
-      return <HomeScreen meals={meals} onCapturePress={() => setScreen({ name: 'capture' })} />;
+    case 'meal':
+      if (!selectedMeal) break;
+      return (
+        <MealScreen
+          meal={selectedMeal}
+          onClose={goHome}
+          onEdit={() => setScreen({ name: 'edit', mealId: selectedMeal.id })}
+          onDelete={() => {
+            removeMeal(selectedMeal);
+            goHome();
+          }}
+        />
+      );
+    case 'edit':
+      if (!selectedMeal) break;
+      return (
+        <MealDetailsScreen
+          photoUri={selectedMeal.photoUri}
+          meal={selectedMeal}
+          onCancel={() => setScreen({ name: 'meal', mealId: selectedMeal.id })}
+          onSave={(details) => {
+            editMeal(selectedMeal, details);
+            setScreen({ name: 'meal', mealId: selectedMeal.id });
+          }}
+        />
+      );
   }
+
+  return (
+    <HomeScreen
+      meals={meals}
+      onCapturePress={() => setScreen({ name: 'capture' })}
+      onMealPress={(meal) => setScreen({ name: 'meal', mealId: meal.id })}
+    />
+  );
 }

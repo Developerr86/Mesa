@@ -39,9 +39,10 @@ const countMealsToday = (meals: Meal[]) => {
 interface HomeScreenProps {
   meals: Meal[];
   onCapturePress: () => void;
+  onMealPress: (meal: Meal) => void;
 }
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({ meals, onCapturePress }) => {
+export const HomeScreen: React.FC<HomeScreenProps> = ({ meals, onCapturePress, onMealPress }) => {
   const { day, dayAndMonth } = formatToday();
   const mealsToday = countMealsToday(meals);
   const [isSheetExpanded, setIsSheetExpanded] = React.useState(false);
@@ -101,7 +102,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ meals, onCapturePress })
         onExpandedChange={setIsSheetExpanded}
       >
         {meals.length > 0 ? (
-          <MealHistoryGrid meals={meals} />
+          <MealHistoryGrid meals={meals} onSelect={onMealPress} />
         ) : (
           <View style={styles.emptyHistory}>
             <View style={styles.plateIllustration}>

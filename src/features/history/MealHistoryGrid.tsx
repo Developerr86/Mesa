@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dimensions, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import type { Meal } from '../meals/mealStore';
 import { Theme } from '../../theme';
@@ -29,12 +29,18 @@ const formatCapturedAt = (capturedAt: Date) => {
 
 interface MealHistoryGridProps {
   meals: Meal[];
+  onSelect: (meal: Meal) => void;
 }
 
-export const MealHistoryGrid: React.FC<MealHistoryGridProps> = ({ meals }) => (
+export const MealHistoryGrid: React.FC<MealHistoryGridProps> = ({ meals, onSelect }) => (
   <View style={styles.grid}>
     {meals.map((meal) => (
-      <View key={meal.id} style={styles.tile}>
+      <Pressable
+        key={meal.id}
+        style={({ pressed }) => [styles.tile, pressed && styles.tilePressed]}
+        onPress={() => onSelect(meal)}
+        accessibilityRole="button"
+      >
         <Image
           source={{ uri: meal.photoUri }}
           style={styles.photo}
@@ -50,7 +56,7 @@ export const MealHistoryGrid: React.FC<MealHistoryGridProps> = ({ meals }) => (
         <Text style={[styles.caption, meal.dishName ? styles.captionUnderName : null]}>
           {formatCapturedAt(meal.capturedAt)}
         </Text>
-      </View>
+      </Pressable>
     ))}
   </View>
 );
@@ -65,6 +71,9 @@ const styles = StyleSheet.create({
   },
   tile: {
     width: TILE_SIZE,
+  },
+  tilePressed: {
+    opacity: 0.7,
   },
   photo: {
     backgroundColor: Theme.colors.sheetBorder,

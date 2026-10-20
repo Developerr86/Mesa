@@ -73,7 +73,10 @@ INGREDIENTS = {
     'milk': 171265,              # Whole milk
     'curd': 171284,              # Yogurt, plain, whole milk
     'cream': 170859,             # Heavy cream
-    'paneer': 2705740,           # FNDDS Cheese, paneer
+    # FNDDS Queso Fresco: a fresh acid-set cheese close to paneer. USDA's own "Cheese, paneer"
+    # (2705740) lists 22.5 g carbs / 23 g sugar per 100 g, far from real paneer (~2–4 g).
+    # Queso fresco is salted, so sodium in paneer dishes reads high.
+    'paneer': 2705745,
     'milk_powder': 170876,       # Whole milk powder (proxy for khoa)
     'condensed_milk': 171275,
     'cheese': 173414,            # Cheddar

@@ -163,13 +163,38 @@ export const listMeals = async (db: SQLiteDatabase): Promise<Meal[]> => {
   return rows.map(toMeal);
 };
 
+type DetailColumns = Omit<MealRow, 'id' | 'photo_file' | 'captured_at'>;
+
+const detailColumns = (details: MealDetails): DetailColumns => ({
+  cost: details.cost,
+  place: details.place,
+  notes: details.notes,
+  dish_id: details.dishId,
+  dish_name: details.dishName,
+  quantity: details.quantity,
+  grams: details.grams,
+  meal_type: details.mealType,
+  meal_source: details.mealSource,
+  kcal: details.nutrition?.kcal ?? null,
+  protein_g: details.nutrition?.protein_g ?? null,
+  carbs_g: details.nutrition?.carbs_g ?? null,
+  fat_g: details.nutrition?.fat_g ?? null,
+  fiber_g: details.nutrition?.fiber_g ?? null,
+  sugars_g: details.nutrition?.sugars_g ?? null,
+  sodium_mg: details.nutrition?.sodium_mg ?? null,
+  predicted_label: details.predictedLabel,
+  predicted_dish_id: details.predictedDishId,
+  predicted_confidence: details.predictedConfidence,
+});
+
 // Copies the captured photo out of the cache into permanent storage, then records the meal.
 export const saveMeal = async (
   db: SQLiteDatabase,
   capturedPhotoUri: string,
-  details: MealDetails
+  details: MealDetails,
+  takenAt: Date
 ): Promise<Meal> => {
-  const capturedAt = Date.now();
+  const capturedAt = takenAt.getTime();
   const source = new File(capturedPhotoUri);
   const extension = source.extension || '.jpg';
   const photoFile = `meal-${capturedAt}${extension}`;
@@ -180,29 +205,7 @@ export const saveMeal = async (
   await source.copy(destination);
 
   try {
-    const row: Omit<MealRow, 'id'> = {
-      photo_file: photoFile,
-      captured_at: capturedAt,
-      cost: details.cost,
-      place: details.place,
-      notes: details.notes,
-      dish_id: details.dishId,
-      dish_name: details.dishName,
-      quantity: details.quantity,
-      grams: details.grams,
-      meal_type: details.mealType,
-      meal_source: details.mealSource,
-      kcal: details.nutrition?.kcal ?? null,
-      protein_g: details.nutrition?.protein_g ?? null,
-      carbs_g: details.nutrition?.carbs_g ?? null,
-      fat_g: details.nutrition?.fat_g ?? null,
-      fiber_g: details.nutrition?.fiber_g ?? null,
-      sugars_g: details.nutrition?.sugars_g ?? null,
-      sodium_mg: details.nutrition?.sodium_mg ?? null,
-      predicted_label: details.predictedLabel,
-      predicted_dish_id: details.predictedDishId,
-      predicted_confidence: details.predictedConfidence,
-    };
+    const row: Omit<MealRow, 'id'> = { photo_file: photoFile, captured_at: capturedAt, ...detailColumns(details) };
     const columns = Object.keys(row);
     const result = await db.runAsync(
       `INSERT INTO meals (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`,
@@ -214,5 +217,30 @@ export const saveMeal = async (
     // Don't leave an orphaned photo behind if the row couldn't be written
     destination.delete();
     throw error;
+  }
+};
+
+// Rewrites everything the details sheet edits; the photo and capture time never change.
+export const updateMeal = async (db: SQLiteDatabase, meal: Meal, details: MealDetails): Promise<Meal> => {
+  const columns = detailColumns(details);
+  await db.runAsync(
+    `UPDATE meals SET ${Object.keys(columns)
+      .map((column) => `${column} = ?`)
+      .join(', ')} WHERE id = ?`,
+    [...Object.values(columns), meal.id]
+  );
+  return { ...meal, ...details };
+};
+
+export const deleteMeal = async (db: SQLiteDatabase, meal: Meal) => {
+  await db.runAsync('DELETE FROM meals WHERE id = ?', meal.id);
+  // The row is gone either way; a missing photo file shouldn't make the delete fail
+  try {
+    const photo = new File(meal.photoUri);
+    if (photo.exists) {
+      photo.delete();
+    }
+  } catch (error) {
+    console.warn('Failed to delete meal photo', error);
   }
 };

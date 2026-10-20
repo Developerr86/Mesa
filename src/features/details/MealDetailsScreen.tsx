@@ -24,7 +24,7 @@ import {
   type Diet,
   type Food,
 } from '../foods/foodDb';
-import { mealTypeForTime, type MealDetails, type MealSource, type MealType } from '../meals/mealStore';
+import { mealTypeForTime, type Meal, type MealDetails, type MealSource, type MealType } from '../meals/mealStore';
 import { recognizeFood, type FoodSuggestion, type Recognition } from '../recognition/recognizeFood';
 import { Theme } from '../../theme';
 
@@ -69,38 +69,46 @@ const formatTime = (date: Date) =>
 
 interface MealDetailsScreenProps {
   photoUri: string;
+  // When set, the form edits this saved meal instead of logging a new one
+  meal?: Meal;
   onCancel: () => void;
-  onRetake: () => void;
-  onSave: (details: MealDetails) => void;
+  onRetake?: () => void;
+  // capturedAt is when the photo was taken (or the saved meal's time when editing)
+  onSave: (details: MealDetails, capturedAt: Date) => void;
 }
 
 const suggestionName = (suggestion: FoodSuggestion) =>
   (suggestion.dishId ? getFood(suggestion.dishId)?.name : null) ?? suggestion.label;
 
-export const MealDetailsScreen: React.FC<MealDetailsScreenProps> = ({ photoUri, onCancel, onRetake, onSave }) => {
+export const MealDetailsScreen: React.FC<MealDetailsScreenProps> = ({ photoUri, meal, onCancel, onRetake, onSave }) => {
   const sheetRef = React.useRef<SurfaceSheetHandle>(null);
   const scrollRef = React.useRef<ScrollView>(null);
   const sectionOffsets = React.useRef<Record<string, number>>({});
-  const [capturedAt] = React.useState(() => new Date());
+  const [capturedAt] = React.useState(() => meal?.capturedAt ?? new Date());
+  const savedFood = meal?.dishId ? (getFood(meal.dishId) ?? null) : null;
 
   const [query, setQuery] = React.useState('');
-  const [food, setFood] = React.useState<Food | null>(null);
-  const [customDishName, setCustomDishName] = React.useState<string | null>(null);
-  const [quantity, setQuantity] = React.useState(1);
-  const [mealType, setMealType] = React.useState<MealType>(() => mealTypeForTime(capturedAt));
-  const [mealSource, setMealSource] = React.useState<MealSource | null>(null);
-  const [cost, setCost] = React.useState('');
-  const [place, setPlace] = React.useState('');
-  const [notes, setNotes] = React.useState('');
+  const [food, setFood] = React.useState<Food | null>(savedFood);
+  const [customDishName, setCustomDishName] = React.useState<string | null>(
+    savedFood ? null : (meal?.dishName ?? null)
+  );
+  const [quantity, setQuantity] = React.useState(meal?.quantity ?? 1);
+  const [mealType, setMealType] = React.useState<MealType>(() => meal?.mealType ?? mealTypeForTime(capturedAt));
+  const [mealSource, setMealSource] = React.useState<MealSource | null>(meal?.mealSource ?? null);
+  const [cost, setCost] = React.useState(meal?.cost != null ? String(meal.cost) : '');
+  const [place, setPlace] = React.useState(meal?.place ?? '');
+  const [notes, setNotes] = React.useState(meal?.notes ?? '');
   const [keyboardHeight, setKeyboardHeight] = React.useState(0);
   const [isSheetExpanded, setIsSheetExpanded] = React.useState(false);
-  const [recognition, setRecognition] = React.useState<Recognition | null | 'pending'>('pending');
+  // Saved meals already went through recognition; editing never re-runs it
+  const [recognition, setRecognition] = React.useState<Recognition | null | 'pending'>(meal ? null : 'pending');
   const [recognizedDishId, setRecognizedDishId] = React.useState<string | null>(null);
   const userPickedDish = React.useRef(false);
 
   // Run the on-device classifier once; prefill only when it's confident and the
   // user hasn't already chosen something themselves.
   React.useEffect(() => {
+    if (meal) return;
     let cancelled = false;
     recognizeFood(photoUri).then((result) => {
       if (cancelled) return;
@@ -116,7 +124,7 @@ export const MealDetailsScreen: React.FC<MealDetailsScreenProps> = ({ photoUri, 
     return () => {
       cancelled = true;
     };
-  }, [photoUri]);
+  }, [photoUri, meal]);
 
   React.useEffect(() => {
     const show = Keyboard.addListener('keyboardDidShow', (event) => setKeyboardHeight(event.endCoordinates.height));
@@ -188,21 +196,25 @@ export const MealDetailsScreen: React.FC<MealDetailsScreenProps> = ({ photoUri, 
     const parsedCost = Number.parseFloat(cost.replace(/,/g, ''));
     const topGuess = recognition && recognition !== 'pending' ? recognition.suggestions[0] : undefined;
 
-    onSave({
-      dishId: food?.id ?? null,
-      dishName: food?.name ?? customDishName,
-      quantity: food ? quantity : null,
-      grams,
-      nutrition,
-      mealType,
-      mealSource,
-      cost: Number.isFinite(parsedCost) ? parsedCost : null,
-      place: place.trim() || null,
-      notes: notes.trim() || null,
-      predictedLabel: topGuess?.label ?? null,
-      predictedDishId: topGuess?.dishId ?? null,
-      predictedConfidence: topGuess?.confidence ?? null,
-    });
+    onSave(
+      {
+        dishId: food?.id ?? null,
+        dishName: food?.name ?? customDishName,
+        quantity: food ? quantity : null,
+        grams,
+        nutrition,
+        mealType,
+        mealSource,
+        cost: Number.isFinite(parsedCost) ? parsedCost : null,
+        place: place.trim() || null,
+        notes: notes.trim() || null,
+        // Keep the original guess when editing, so it still records what the model saw
+        predictedLabel: meal ? meal.predictedLabel : (topGuess?.label ?? null),
+        predictedDishId: meal ? meal.predictedDishId : (topGuess?.dishId ?? null),
+        predictedConfidence: meal ? meal.predictedConfidence : (topGuess?.confidence ?? null),
+      },
+      capturedAt
+    );
   };
 
   const saveButton = (
@@ -226,16 +238,23 @@ export const MealDetailsScreen: React.FC<MealDetailsScreenProps> = ({ photoUri, 
       />
       <Image source={{ uri: photoUri }} style={styles.photo} contentFit="cover" />
 
-      <Pressable style={styles.closeButton} onPress={onCancel} hitSlop={12} accessibilityLabel="Discard meal">
+      <Pressable
+        style={styles.closeButton}
+        onPress={onCancel}
+        hitSlop={12}
+        accessibilityLabel={meal ? 'Cancel editing' : 'Discard meal'}
+      >
         <CloseGlyph />
       </Pressable>
-      <Pressable style={styles.retakeButton} onPress={onRetake} hitSlop={8} accessibilityRole="button">
-        <Text style={styles.retakeLabel}>Retake</Text>
-      </Pressable>
+      {onRetake ? (
+        <Pressable style={styles.retakeButton} onPress={onRetake} hitSlop={8} accessibilityRole="button">
+          <Text style={styles.retakeLabel}>Retake</Text>
+        </Pressable>
+      ) : null}
 
       <SurfaceSheet
         ref={sheetRef}
-        title={hasDish ? (food?.name ?? customDishName ?? '') : 'Log this meal'}
+        title={hasDish ? (food?.name ?? customDishName ?? '') : meal ? 'Edit meal' : 'Log this meal'}
         subtitle={`${formatTime(capturedAt)} · ${MEAL_TYPES.find((t) => t.value === mealType)?.label}`}
         titleAccessory={saveButton}
         initialSnap="revealed"
@@ -315,7 +334,9 @@ export const MealDetailsScreen: React.FC<MealDetailsScreenProps> = ({ photoUri, 
                   onChoose={chooseSuggestion}
                 />
               ) : !hasDish ? (
-                <Text style={[styles.recognizingLabel, styles.unrecognized]}>Couldn’t recognise a dish — search above.</Text>
+                <Text style={[styles.recognizingLabel, styles.unrecognized]}>
+                  Couldn’t recognise a dish — search above.
+                </Text>
               ) : null
             ) : null}
           </View>
