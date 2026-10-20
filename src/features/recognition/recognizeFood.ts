@@ -1,3 +1,4 @@
+import { Asset } from 'expo-asset';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as jpeg from 'jpeg-js';
 import type { TfliteModel } from 'react-native-fast-tflite';
@@ -30,7 +31,13 @@ const loadModel = () => {
     modelPromise = (async () => {
       try {
         const { loadTensorflowModel } = require('react-native-fast-tflite') as typeof import('react-native-fast-tflite');
-        return await loadTensorflowModel(require('../../../assets/models/food_v1.tflite'), []);
+        // Resolve the bundled model to a file:// path first. Release builds pack it as an
+        // Android raw resource, which fast-tflite can't open from require() directly.
+        const [modelAsset] = await Asset.loadAsync(require('../../../assets/models/food_v1.tflite'));
+        if (!modelAsset.localUri) {
+          throw new Error('Food model asset could not be resolved to a local file');
+        }
+        return await loadTensorflowModel({ url: modelAsset.localUri }, []);
       } catch (error) {
         console.info('Food recognition unavailable:', error instanceof Error ? error.message : error);
         return null;
