@@ -6,9 +6,9 @@ import * as Device from 'expo-device';
 export const shouldUseSamplePhoto = __DEV__ && !Device.isDevice;
 
 const SAMPLE_PHOTOS = [
-  require('../../../assets/avocado_toast.png'),
-  require('../../../assets/chicken_salad.png'),
-  require('../../../assets/ramen_bowl.png'),
+  require('../../../assets/avocado_toast.jpg'),
+  require('../../../assets/chicken_salad.jpg'),
+  require('../../../assets/ramen_bowl.jpg'),
 ];
 
 let nextSampleIndex = 0;
