@@ -1,0 +1,53 @@
+name: Android release APK
+
+# Builds a release APK and attaches it to the run as an artifact.
+# Run it by hand from the Actions tab (or `gh workflow run android-release.yml`),
+# or push a version tag such as v0.1.0.
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+concurrency:
+  group: android-release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # React Native's Android toolchain fails under JDK 24+ (see HANDOFF.md)
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - run: npm ci
+
+      # android/ is generated from app.json and git-ignored
+      - run: npx expo prebuild --platform android --no-install
+
+      # arm64-v8a covers practically every current Android phone and keeps the
+      # build (and APK) far smaller than a four-ABI universal APK.
+      - name: Build release APK
+        working-directory: android
+        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mesa-release-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 30
