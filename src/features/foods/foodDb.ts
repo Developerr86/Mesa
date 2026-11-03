@@ -69,6 +69,8 @@ export const searchFoods = (query: string, limit = 6): Food[] => {
 // Units that are naturally counted ("2 rotis") rather than scaled ("1½ katori")
 const COUNTABLE_UNITS = new Set(['piece', 'slice', 'scoop', 'cup', 'glass', 'tbsp', 'handful']);
 
+export const isCountable = (food: Food) => COUNTABLE_UNITS.has(food.portionUnit);
+
 const UNIT_LABELS: Record<string, [singular: string, plural: string]> = {
   piece: ['piece', 'pieces'],
   slice: ['slice', 'slices'],

@@ -28,7 +28,7 @@ Reference nutrition for prepared (non-packaged) dishes. The same dish `id`s will
 - Its `__background__` class does not fire on non-food photos, so it cannot tell "not food" by itself.
 - It returns one label per photo (no multi-item plates).
 
-Retraining a classifier on our own `visual_group`s fixes the first and third; a separate food/not-food check fixes the second.
+Mesa's own Indian food detector (`data/food-detector`) covers the first and third: it finds roti, dal, rice, sabzi and 38 more classes, several per photo. The food/not-food check below covers the second.
 
 ## Food / not-food check
 

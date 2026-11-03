@@ -28,8 +28,31 @@ Attribution (CC BY 4.0): *Indian_Food Dataset*, Royal0wl, Roboflow Universe, 202
 3. Train and export (Python 3.12 with `pip install ultralytics`):
    ```bash
    yolo detect train model=yolo11n.pt data=yolo-data/dataset.yaml epochs=40 patience=10 imgsz=416 batch=32 device=mps
-   yolo export model=runs/detect/train/weights/best.pt format=tflite imgsz=416
+   yolo export model=runs/detect/train/weights/best.pt format=litert imgsz=416
    ```
-4. Copy the exported `best_float32.tflite` to `assets/models/food_detector.tflite`.
+   The first export installs the LiteRT converter and can fail partway; run it again.
+4. Copy the exported `best.tflite` to `assets/models/food_detector.tflite`.
 
 To add a dataset, add its category mapping to `SOURCE_CLASSES` (and any new classes to `CLASSES`).
+
+## Model format
+
+- Input: `[1, 3, 416, 416]` float32 RGB in 0–1, **channels first**
+- Output: `[1, 46, 3549]` float32. Each of the 3,549 anchors has a normalized box (centre x, centre y, width, height), then one score per class.
+
+The app reads both shapes from the model, then applies a 0.25 score threshold and per-class NMS at IoU 0.5. Each box left is one serving, so 3 roti boxes prefill "3 pieces".
+
+## Current model (v1)
+
+40 epochs, about 2.7 h on an M5. On the held-out test split (715 images), mAP50 is 0.855 in PyTorch and 0.846 in the exported TFLite.
+
+| Class | mAP50 |
+|---|---|
+| roti | 0.93 |
+| rice | 0.92 |
+| sabzi | 0.90 |
+| dal | 0.88 |
+
+Most classes score 0.85–0.99. The weak ones have little test data or vague labels: egg 0.26 (2 test boxes), papad 0.50, sambar 0.42, puri 0.62, curry 0.64.
+
+It only knows food, so it can't replace the food/not-food check: it reads a snowflake photo as rice (0.96). On non-Indian dishes it guesses the nearest Indian class (a chicken salad came out as biryani); food_V1 covers those dishes.

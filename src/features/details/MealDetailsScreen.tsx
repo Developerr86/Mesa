@@ -17,6 +17,7 @@ import { CloseGlyph } from '../../components/CloseGlyph';
 import { SCREEN_HEIGHT } from '../../components/screen';
 import {
   getFood,
+  isCountable,
   nutritionFor,
   portionOptions,
   searchFoods,
@@ -101,13 +102,18 @@ interface DraftItem {
 let nextDraftKey = 0;
 const draftKey = () => `item-${nextDraftKey++}`;
 
-const draftFromFood = (food: Food, recognizedConfidence: number | null = null): DraftItem => ({
+const draftFromFood = (food: Food, recognizedConfidence: number | null = null, quantity = 1): DraftItem => ({
   key: draftKey(),
   food,
   name: food.name,
-  quantity: 1,
+  quantity,
   recognizedConfidence,
 });
+
+// A recognised dish as a plate item. Counted foods start at the number of servings the
+// detector saw ("3 rotis"); a count of katoris or bowls is left to the user.
+const draftFromSuggestion = (food: Food, suggestion: FoodSuggestion) =>
+  draftFromFood(food, suggestion.confidence, isCountable(food) ? (suggestion.count ?? 1) : 1);
 
 const draftFromTag = (name: string, recognizedConfidence: number | null = null): DraftItem => ({
   key: draftKey(),
@@ -179,7 +185,7 @@ export const MealDetailsScreen: React.FC<MealDetailsScreenProps> = ({
         const confident = result.suggestions.flatMap((suggestion) => {
           const food =
             suggestion.dishId && suggestion.confidence >= PREFILL_CONFIDENCE ? getFood(suggestion.dishId) : undefined;
-          return food ? [draftFromFood(food, suggestion.confidence)] : [];
+          return food ? [draftFromSuggestion(food, suggestion)] : [];
         });
         if (confident.length > 0) setItems(confident);
       });
@@ -263,7 +269,7 @@ export const MealDetailsScreen: React.FC<MealDetailsScreenProps> = ({
 
   const addSuggestion = (suggestion: FoodSuggestion) => {
     const food = suggestion.dishId ? getFood(suggestion.dishId) : undefined;
-    addItem(food ? draftFromFood(food, suggestion.confidence) : draftFromTag(suggestion.label, suggestion.confidence));
+    addItem(food ? draftFromSuggestion(food, suggestion) : draftFromTag(suggestion.label, suggestion.confidence));
   };
 
   const removeItem = (key: string) => {
