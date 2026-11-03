@@ -18,17 +18,24 @@ import { SCREEN_HEIGHT } from '../../components/screen';
 import {
   getFood,
   nutritionFor,
-  portionLabel,
   portionOptions,
   searchFoods,
   type Diet,
   type Food,
 } from '../foods/foodDb';
-import { mealTypeForTime, type Meal, type MealDetails, type MealSource, type MealType } from '../meals/mealStore';
+import {
+  mealTypeForTime,
+  totalNutrition,
+  type Meal,
+  type MealDetails,
+  type MealItem,
+  type MealSource,
+  type MealType,
+} from '../meals/mealStore';
 import { recognizeFood, type FoodSuggestion, type Recognition } from '../recognition/recognizeFood';
 import { Theme } from '../../theme';
 
-// Above this the classifier's top dish is filled in; below it, guesses are only offered as chips
+// Dishes the classifier is at least this sure of are added to the plate; weaker ones are offered as chips
 const PREFILL_CONFIDENCE = 0.5;
 // Guesses below this are noise. The model always names some dish, even for a photo of a
 // wall, so a weak best guess is also our only hint that the photo may not be food.
@@ -71,6 +78,8 @@ interface MealDetailsScreenProps {
   photoUri: string;
   // When set, the form edits this saved meal instead of logging a new one
   meal?: Meal;
+  // Settings › "Ask cost for home-cooked meals"
+  askCostForHomeMeals: boolean;
   onCancel: () => void;
   onRetake?: () => void;
   // capturedAt is when the photo was taken (or the saved meal's time when editing)
@@ -80,19 +89,72 @@ interface MealDetailsScreenProps {
 const suggestionName = (suggestion: FoodSuggestion) =>
   (suggestion.dishId ? getFood(suggestion.dishId)?.name : null) ?? suggestion.label;
 
-export const MealDetailsScreen: React.FC<MealDetailsScreenProps> = ({ photoUri, meal, onCancel, onRetake, onSave }) => {
+// An item being edited. `food` is null for tags (names that aren't in the food database).
+interface DraftItem {
+  key: string;
+  food: Food | null;
+  name: string;
+  quantity: number;
+  recognizedConfidence: number | null;
+}
+
+let nextDraftKey = 0;
+const draftKey = () => `item-${nextDraftKey++}`;
+
+const draftFromFood = (food: Food, recognizedConfidence: number | null = null): DraftItem => ({
+  key: draftKey(),
+  food,
+  name: food.name,
+  quantity: 1,
+  recognizedConfidence,
+});
+
+const draftFromTag = (name: string, recognizedConfidence: number | null = null): DraftItem => ({
+  key: draftKey(),
+  food: null,
+  name,
+  quantity: 1,
+  recognizedConfidence,
+});
+
+const toMealItem = (item: DraftItem): MealItem => {
+  const grams = item.food ? item.food.portionGrams * item.quantity : null;
+  return {
+    dishId: item.food?.id ?? null,
+    name: item.name,
+    quantity: item.food ? item.quantity : null,
+    grams,
+    nutrition: item.food && grams ? nutritionFor(item.food, grams) : null,
+    recognizedConfidence: item.recognizedConfidence,
+  };
+};
+
+const sameItem = (item: DraftItem, suggestion: FoodSuggestion) =>
+  suggestion.dishId ? item.food?.id === suggestion.dishId : item.name === suggestion.label;
+
+export const MealDetailsScreen: React.FC<MealDetailsScreenProps> = ({
+  photoUri,
+  meal,
+  askCostForHomeMeals,
+  onCancel,
+  onRetake,
+  onSave,
+}) => {
   const sheetRef = React.useRef<SurfaceSheetHandle>(null);
   const scrollRef = React.useRef<ScrollView>(null);
   const sectionOffsets = React.useRef<Record<string, number>>({});
   const [capturedAt] = React.useState(() => meal?.capturedAt ?? new Date());
-  const savedFood = meal?.dishId ? (getFood(meal.dishId) ?? null) : null;
 
   const [query, setQuery] = React.useState('');
-  const [food, setFood] = React.useState<Food | null>(savedFood);
-  const [customDishName, setCustomDishName] = React.useState<string | null>(
-    savedFood ? null : (meal?.dishName ?? null)
+  const [items, setItems] = React.useState<DraftItem[]>(() =>
+    (meal?.items ?? []).map((item) => {
+      const food = item.dishId ? getFood(item.dishId) : undefined;
+      return {
+        ...(food ? draftFromFood(food, item.recognizedConfidence) : draftFromTag(item.name, item.recognizedConfidence)),
+        quantity: item.quantity ?? 1,
+      };
+    })
   );
-  const [quantity, setQuantity] = React.useState(meal?.quantity ?? 1);
   const [mealType, setMealType] = React.useState<MealType>(() => meal?.mealType ?? mealTypeForTime(capturedAt));
   const [mealSource, setMealSource] = React.useState<MealSource | null>(meal?.mealSource ?? null);
   const [cost, setCost] = React.useState(meal?.cost != null ? String(meal.cost) : '');
@@ -102,29 +164,37 @@ export const MealDetailsScreen: React.FC<MealDetailsScreenProps> = ({ photoUri, 
   const [isSheetExpanded, setIsSheetExpanded] = React.useState(false);
   // Saved meals already went through recognition; editing never re-runs it
   const [recognition, setRecognition] = React.useState<Recognition | null | 'pending'>(meal ? null : 'pending');
-  const [recognizedDishId, setRecognizedDishId] = React.useState<string | null>(null);
-  const userPickedDish = React.useRef(false);
+  const userEditedItems = React.useRef(false);
 
-  // Run the on-device classifier once; prefill only when it's confident and the
-  // user hasn't already chosen something themselves.
+  // Run on-device recognition; add every dish it's confident about, unless the user has
+  // already started building the list themselves. `skipFoodCheck` is the user overruling a
+  // "doesn't look like food" verdict.
+  const runRecognition = React.useCallback(
+    (skipFoodCheck: boolean, isCancelled: () => boolean = () => false) => {
+      setRecognition('pending');
+      recognizeFood(photoUri, { skipFoodCheck }).then((result) => {
+        if (isCancelled()) return;
+        setRecognition(result);
+        if (result?.kind !== 'food' || userEditedItems.current) return;
+        const confident = result.suggestions.flatMap((suggestion) => {
+          const food =
+            suggestion.dishId && suggestion.confidence >= PREFILL_CONFIDENCE ? getFood(suggestion.dishId) : undefined;
+          return food ? [draftFromFood(food, suggestion.confidence)] : [];
+        });
+        if (confident.length > 0) setItems(confident);
+      });
+    },
+    [photoUri]
+  );
+
   React.useEffect(() => {
     if (meal) return;
     let cancelled = false;
-    recognizeFood(photoUri).then((result) => {
-      if (cancelled) return;
-      setRecognition(result);
-      const top = result?.suggestions[0];
-      const topFood = top?.dishId && top.confidence >= PREFILL_CONFIDENCE ? getFood(top.dishId) : undefined;
-      if (topFood && !userPickedDish.current) {
-        setFood(topFood);
-        setQuantity(1);
-        setRecognizedDishId(topFood.id);
-      }
-    });
+    runRecognition(false, () => cancelled);
     return () => {
       cancelled = true;
     };
-  }, [photoUri, meal]);
+  }, [meal, runRecognition]);
 
   React.useEffect(() => {
     const show = Keyboard.addListener('keyboardDidShow', (event) => setKeyboardHeight(event.endCoordinates.height));
@@ -135,10 +205,27 @@ export const MealDetailsScreen: React.FC<MealDetailsScreenProps> = ({ photoUri, 
     };
   }, []);
 
-  const results = React.useMemo(() => searchFoods(query), [query]);
-  const grams = food ? food.portionGrams * quantity : null;
-  const nutrition = food && grams ? nutritionFor(food, grams) : null;
-  const hasDish = food !== null || customDishName !== null;
+  const results = React.useMemo(
+    () => searchFoods(query).filter((result) => !items.some((item) => item.food?.id === result.id)),
+    [query, items]
+  );
+  const foodSuggestions =
+    recognition && recognition !== 'pending' && recognition.kind === 'food' ? recognition.suggestions : [];
+  const openSuggestions = foodSuggestions.filter(
+    (suggestion) =>
+      suggestion.confidence >= SUGGESTION_CONFIDENCE && !items.some((item) => sameItem(item, suggestion))
+  );
+  const mealItems = items.map(toMealItem);
+  const nutrition = totalNutrition(mealItems);
+  const showCost = mealSource !== 'home' || askCostForHomeMeals;
+  const sheetTitle =
+    items.length === 0
+      ? meal
+        ? 'Edit meal'
+        : 'Log this meal'
+      : items.length <= 2
+        ? items.map((item) => item.name).join(', ')
+        : `${items[0].name} + ${items.length - 1} more`;
 
   // Typing needs the whole screen: expand the sheet, then bring the field into view
   // once the keyboard has opened.
@@ -153,59 +240,54 @@ export const MealDetailsScreen: React.FC<MealDetailsScreenProps> = ({ photoUri, 
     sectionOffsets.current[section] = event.nativeEvent.layout.y;
   };
 
+  // The search field sits below the item cards, so scroll to the field itself (its offset
+  // inside the dish section plus the section's own offset) to keep results above the keyboard.
+  const focusSearch = () => {
+    sheetRef.current?.snapTo('expanded');
+    setTimeout(() => {
+      const y = (sectionOffsets.current.dish ?? 0) + (sectionOffsets.current.dishSearch ?? 0);
+      scrollRef.current?.scrollTo({ y: Math.max(0, y - 16), animated: true });
+    }, 350);
+  };
+
   const tick = () => Haptics.selectionAsync().catch(() => {});
 
-  const chooseFood = (next: Food) => {
+  const addItem = (item: DraftItem) => {
     tick();
-    userPickedDish.current = true;
-    setFood(next);
-    setCustomDishName(null);
-    setQuantity(1);
+    userEditedItems.current = true;
+    setItems((current) => [...current, item]);
     setQuery('');
     Keyboard.dismiss();
     sheetRef.current?.snapTo('revealed');
   };
 
-  const chooseCustomDish = (name: string) => {
+  const addSuggestion = (suggestion: FoodSuggestion) => {
+    const food = suggestion.dishId ? getFood(suggestion.dishId) : undefined;
+    addItem(food ? draftFromFood(food, suggestion.confidence) : draftFromTag(suggestion.label, suggestion.confidence));
+  };
+
+  const removeItem = (key: string) => {
     tick();
-    userPickedDish.current = true;
-    setFood(null);
-    setCustomDishName(name);
-    setQuery('');
-    Keyboard.dismiss();
-    sheetRef.current?.snapTo('revealed');
+    userEditedItems.current = true;
+    setItems((current) => current.filter((item) => item.key !== key));
   };
 
-  const chooseSuggestion = (suggestion: FoodSuggestion) => {
-    const suggestedFood = suggestion.dishId ? getFood(suggestion.dishId) : undefined;
-    if (suggestedFood) {
-      chooseFood(suggestedFood);
-    } else {
-      chooseCustomDish(suggestion.label);
-    }
-  };
-
-  const clearDish = () => {
-    userPickedDish.current = true;
-    setFood(null);
-    setCustomDishName(null);
+  const setItemQuantity = (key: string, quantity: number) => {
+    tick();
+    setItems((current) => current.map((item) => (item.key === key ? { ...item, quantity } : item)));
   };
 
   const handleSave = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     const parsedCost = Number.parseFloat(cost.replace(/,/g, ''));
-    const topGuess = recognition && recognition !== 'pending' ? recognition.suggestions[0] : undefined;
+    const topGuess = foodSuggestions[0];
 
     onSave(
       {
-        dishId: food?.id ?? null,
-        dishName: food?.name ?? customDishName,
-        quantity: food ? quantity : null,
-        grams,
-        nutrition,
+        items: mealItems,
         mealType,
         mealSource,
-        cost: Number.isFinite(parsedCost) ? parsedCost : null,
+        cost: showCost && Number.isFinite(parsedCost) ? parsedCost : null,
         place: place.trim() || null,
         notes: notes.trim() || null,
         // Keep the original guess when editing, so it still records what the model saw
@@ -254,7 +336,7 @@ export const MealDetailsScreen: React.FC<MealDetailsScreenProps> = ({ photoUri, 
 
       <SurfaceSheet
         ref={sheetRef}
-        title={hasDish ? (food?.name ?? customDishName ?? '') : meal ? 'Edit meal' : 'Log this meal'}
+        title={sheetTitle}
         subtitle={`${formatTime(capturedAt)} · ${MEAL_TYPES.find((t) => t.value === mealType)?.label}`}
         titleAccessory={saveButton}
         initialSnap="revealed"
@@ -270,50 +352,47 @@ export const MealDetailsScreen: React.FC<MealDetailsScreenProps> = ({ photoUri, 
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: keyboardHeight + SCREEN_HEIGHT * 0.45 }}
         >
-          {/* Dish */}
+          {/* Items */}
           <View onLayout={trackSection('dish')}>
             <Text style={styles.sectionLabel}>WHAT'S ON THE PLATE?</Text>
-            {hasDish ? (
-              <View style={styles.selectedDish}>
-                <View style={styles.selectedDishText}>
-                  <Text style={styles.selectedDishName}>{food?.name ?? customDishName}</Text>
-                  <Text style={styles.selectedDishMeta}>
-                    {food && food.id === recognizedDishId ? 'Recognised on this phone · ' : ''}
-                    {food ? describeFood(food) : 'Not in the food list'}
-                  </Text>
+
+            {items.map((item) => (
+              <ItemCard
+                key={item.key}
+                item={item}
+                onRemove={() => removeItem(item.key)}
+                onQuantityChange={(quantity) => setItemQuantity(item.key, quantity)}
+              />
+            ))}
+
+            <View onLayout={trackSection('dishSearch')} />
+            <TextInput
+              style={[styles.input, items.length > 0 && styles.inputSpaced]}
+              value={query}
+              onChangeText={setQuery}
+              onFocus={focusSearch}
+              placeholder={items.length > 0 ? 'Add something else…' : 'Search dishes — dal, roti, rice…'}
+              placeholderTextColor={Theme.colors.sheetTextMuted}
+              autoCorrect={false}
+              returnKeyType="done"
+              onSubmitEditing={() => {
+                if (query.trim().length > 1 && results.length === 0) addItem(draftFromTag(query.trim()));
+              }}
+            />
+            {results.map((result) => (
+              <Pressable key={result.id} style={styles.resultRow} onPress={() => addItem(draftFromFood(result))}>
+                <DietMark diet={result.diet} />
+                <View style={styles.resultText}>
+                  <Text style={styles.resultName}>{result.name}</Text>
+                  <Text style={styles.resultMeta}>{describeFood(result)}</Text>
                 </View>
-                <Pressable onPress={clearDish} hitSlop={8} accessibilityRole="button">
-                  <Text style={styles.linkLabel}>Change</Text>
-                </Pressable>
-              </View>
-            ) : (
-              <>
-                <TextInput
-                  style={styles.input}
-                  value={query}
-                  onChangeText={setQuery}
-                  onFocus={focusSection('dish')}
-                  placeholder="Search dishes — dal, biryani, pizza…"
-                  placeholderTextColor={Theme.colors.sheetTextMuted}
-                  autoCorrect={false}
-                  returnKeyType="search"
-                />
-                {results.map((result) => (
-                  <Pressable key={result.id} style={styles.resultRow} onPress={() => chooseFood(result)}>
-                    <DietMark diet={result.diet} />
-                    <View style={styles.resultText}>
-                      <Text style={styles.resultName}>{result.name}</Text>
-                      <Text style={styles.resultMeta}>{describeFood(result)}</Text>
-                    </View>
-                  </Pressable>
-                ))}
-                {query.trim().length > 1 ? (
-                  <Pressable style={styles.resultRow} onPress={() => chooseCustomDish(query.trim())}>
-                    <Text style={styles.linkLabel}>Use “{query.trim()}”</Text>
-                  </Pressable>
-                ) : null}
-              </>
-            )}
+              </Pressable>
+            ))}
+            {query.trim().length > 1 ? (
+              <Pressable style={styles.resultRow} onPress={() => addItem(draftFromTag(query.trim()))}>
+                <Text style={styles.linkLabel}>Add “{query.trim()}” as a tag</Text>
+              </Pressable>
+            ) : null}
 
             {recognition === 'pending' ? (
               <View style={styles.recognizing}>
@@ -322,18 +401,22 @@ export const MealDetailsScreen: React.FC<MealDetailsScreenProps> = ({ photoUri, 
               </View>
             ) : null}
 
-            {recognition && recognition !== 'pending' && !query ? (
-              recognition.suggestions.some((suggestion) => suggestion.confidence >= SUGGESTION_CONFIDENCE) ? (
+            {recognition && recognition !== 'pending' && recognition.kind !== 'food' && items.length === 0 && !query ? (
+              <PhotoVerdict
+                reason={recognition.kind === 'not_food' ? 'not_food' : recognition.reason}
+                onRetake={onRetake}
+                onCheckAnyway={recognition.kind === 'not_food' ? () => runRecognition(true) : undefined}
+              />
+            ) : null}
+
+            {recognition && recognition !== 'pending' && recognition.kind === 'food' && !query ? (
+              openSuggestions.length > 0 ? (
                 <SuggestionChips
-                  title={hasDish ? 'NOT RIGHT? MAYBE' : 'LOOKS LIKE'}
-                  suggestions={recognition.suggestions.filter(
-                    (suggestion) =>
-                      suggestion.confidence >= SUGGESTION_CONFIDENCE &&
-                      suggestionName(suggestion) !== (food?.name ?? customDishName)
-                  )}
-                  onChoose={chooseSuggestion}
+                  title={items.length > 0 ? 'ALSO ON THE PLATE?' : 'LOOKS LIKE'}
+                  suggestions={openSuggestions}
+                  onChoose={addSuggestion}
                 />
-              ) : !hasDish ? (
+              ) : items.length === 0 ? (
                 <Text style={[styles.recognizingLabel, styles.unrecognized]}>
                   Couldn’t recognise a dish — search above.
                 </Text>
@@ -341,34 +424,18 @@ export const MealDetailsScreen: React.FC<MealDetailsScreenProps> = ({ photoUri, 
             ) : null}
           </View>
 
-          {/* Portion + nutrition estimate */}
-          {food && nutrition && grams ? (
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>HOW MUCH?</Text>
-              <View style={styles.chipRow}>
-                {portionOptions(food).map((option) => (
-                  <Chip
-                    key={option.quantity}
-                    label={option.label}
-                    selected={option.quantity === quantity}
-                    onPress={() => {
-                      tick();
-                      setQuantity(option.quantity);
-                    }}
-                  />
-                ))}
-              </View>
-
-              <View style={styles.nutritionCard}>
-                <Text style={styles.kcal}>≈ {Math.round(nutrition.kcal)} kcal</Text>
-                <Text style={styles.macros}>
-                  {Math.round(nutrition.protein_g)} g protein · {Math.round(nutrition.carbs_g)} g carbs ·{' '}
-                  {Math.round(nutrition.fat_g)} g fat
-                </Text>
-                <Text style={styles.nutritionCaption}>
-                  Estimate for {portionLabel(food, quantity)} (~{Math.round(grams)} g) · USDA FoodData Central
-                </Text>
-              </View>
+          {/* Nutrition total */}
+          {nutrition ? (
+            <View style={styles.nutritionCard}>
+              <Text style={styles.kcal}>≈ {Math.round(nutrition.kcal)} kcal</Text>
+              <Text style={styles.macros}>
+                {Math.round(nutrition.protein_g)} g protein · {Math.round(nutrition.carbs_g)} g carbs ·{' '}
+                {Math.round(nutrition.fat_g)} g fat
+              </Text>
+              <Text style={styles.nutritionCaption}>
+                Estimate for {mealItems.filter((item) => item.nutrition).length === 1 ? 'this dish' : 'these dishes'}
+                {mealItems.some((item) => !item.nutrition) ? ' (tags not counted)' : ''} · USDA FoodData Central
+              </Text>
             </View>
           ) : null}
 
@@ -418,22 +485,24 @@ export const MealDetailsScreen: React.FC<MealDetailsScreenProps> = ({ photoUri, 
             ) : null}
           </View>
 
-          {/* Cost */}
-          <View style={styles.section} onLayout={trackSection('cost')}>
-            <Text style={styles.sectionLabel}>COST</Text>
-            <View style={styles.costRow}>
-              <Text style={styles.currency}>₹</Text>
-              <TextInput
-                style={[styles.input, styles.costInput]}
-                value={cost}
-                onChangeText={setCost}
-                onFocus={focusSection('cost')}
-                placeholder="0"
-                placeholderTextColor={Theme.colors.sheetTextMuted}
-                keyboardType="decimal-pad"
-              />
+          {/* Cost — skipped for home-cooked meals unless the setting asks for it */}
+          {showCost ? (
+            <View style={styles.section} onLayout={trackSection('cost')}>
+              <Text style={styles.sectionLabel}>COST</Text>
+              <View style={styles.costRow}>
+                <Text style={styles.currency}>₹</Text>
+                <TextInput
+                  style={[styles.input, styles.costInput]}
+                  value={cost}
+                  onChangeText={setCost}
+                  onFocus={focusSection('cost')}
+                  placeholder="0"
+                  placeholderTextColor={Theme.colors.sheetTextMuted}
+                  keyboardType="decimal-pad"
+                />
+              </View>
             </View>
-          </View>
+          ) : null}
 
           {/* Notes */}
           <View style={styles.section} onLayout={trackSection('notes')}>
@@ -453,6 +522,78 @@ export const MealDetailsScreen: React.FC<MealDetailsScreenProps> = ({ photoUri, 
     </View>
   );
 };
+
+// One item on the plate: its name, where it came from, and (for database dishes) the portion.
+const ItemCard: React.FC<{
+  item: DraftItem;
+  onRemove: () => void;
+  onQuantityChange: (quantity: number) => void;
+}> = ({ item, onRemove, onQuantityChange }) => {
+  const kcal = item.food ? nutritionFor(item.food, item.food.portionGrams * item.quantity).kcal : null;
+  return (
+    <View style={[styles.itemCard, !item.food && styles.tagCard]}>
+      <View style={styles.itemHeader}>
+        <View style={styles.selectedDishText}>
+          <Text style={styles.selectedDishName}>{item.name}</Text>
+          <Text style={styles.selectedDishMeta}>
+            {item.recognizedConfidence !== null ? 'Recognised on this phone · ' : ''}
+            {item.food ? describeFood(item.food) : 'Tag · not in the food list'}
+            {kcal !== null ? ` · ≈ ${Math.round(kcal)} kcal` : ''}
+          </Text>
+        </View>
+        <Pressable onPress={onRemove} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Remove ${item.name}`}>
+          <Text style={styles.removeLabel}>✕</Text>
+        </Pressable>
+      </View>
+      {item.food ? (
+        <View style={[styles.chipRow, styles.itemPortions]}>
+          {portionOptions(item.food).map((option) => (
+            <Chip
+              key={option.quantity}
+              label={option.label}
+              selected={option.quantity === item.quantity}
+              small
+              onPress={() => onQuantityChange(option.quantity)}
+            />
+          ))}
+        </View>
+      ) : null}
+    </View>
+  );
+};
+
+const VERDICTS: Record<'dark' | 'blank' | 'not_food', { title: string; body: string }> = {
+  dark: { title: 'Too dark to see anything', body: 'Retake in better light, or search for the dish above.' },
+  blank: { title: 'Nothing in this photo', body: 'Retake with the plate in frame, or search for the dish above.' },
+  not_food: { title: 'This doesn’t look like food', body: 'If it is, search for it above or check for dishes anyway.' },
+};
+
+// Shown when recognition decided the photo can't be (or isn't) food. It never blocks
+// logging: search stays available, and "not food" can be overruled.
+const PhotoVerdict: React.FC<{
+  reason: keyof typeof VERDICTS;
+  onRetake?: () => void;
+  onCheckAnyway?: () => void;
+}> = ({ reason, onRetake, onCheckAnyway }) => (
+  <View style={styles.verdict}>
+    <View style={styles.verdictRow}>
+      <View style={styles.verdictText}>
+        <Text style={styles.verdictTitle}>{VERDICTS[reason].title}</Text>
+        <Text style={styles.verdictBody}>{VERDICTS[reason].body}</Text>
+      </View>
+      {onRetake ? (
+        <Pressable style={styles.verdictRetake} onPress={onRetake} hitSlop={8} accessibilityRole="button">
+          <Text style={styles.verdictRetakeLabel}>Retake</Text>
+        </Pressable>
+      ) : null}
+    </View>
+    {onCheckAnyway ? (
+      <Pressable onPress={onCheckAnyway} hitSlop={8} accessibilityRole="button" style={styles.verdictAnyway}>
+        <Text style={styles.linkLabel}>Check for dishes anyway</Text>
+      </Pressable>
+    ) : null}
+  </View>
+);
 
 const SuggestionChips: React.FC<{
   title: string;
@@ -478,17 +619,20 @@ const SuggestionChips: React.FC<{
 interface ChipProps {
   label: string;
   selected: boolean;
+  small?: boolean;
   onPress: () => void;
 }
 
-const Chip: React.FC<ChipProps> = ({ label, selected, onPress }) => (
+const Chip: React.FC<ChipProps> = ({ label, selected, small, onPress }) => (
   <Pressable
-    style={[styles.chip, selected && styles.chipSelected]}
+    style={[styles.chip, small && styles.chipSmall, selected && styles.chipSelected]}
     onPress={onPress}
     accessibilityRole="button"
     accessibilityState={{ selected }}
   >
-    <Text style={[styles.chipLabel, selected && styles.chipLabelSelected]}>{label}</Text>
+    <Text style={[styles.chipLabel, small && styles.chipLabelSmall, selected && styles.chipLabelSelected]}>
+      {label}
+    </Text>
   </Pressable>
 );
 
@@ -549,6 +693,46 @@ const styles = StyleSheet.create({
   },
   suggestions: {
     marginTop: 16,
+  },
+  verdict: {
+    borderColor: Theme.colors.sheetBorder,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    marginTop: 14,
+    padding: 14,
+  },
+  verdictRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+  },
+  verdictAnyway: {
+    marginTop: 12,
+  },
+  verdictText: {
+    flex: 1,
+  },
+  verdictTitle: {
+    color: Theme.colors.sheetText,
+    fontSize: 15,
+    fontWeight: Theme.typography.weights.bold,
+  },
+  verdictBody: {
+    color: Theme.colors.sheetTextMuted,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 2,
+  },
+  verdictRetake: {
+    backgroundColor: Theme.colors.accent,
+    borderRadius: 18,
+    marginLeft: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  verdictRetakeLabel: {
+    color: Theme.colors.canvasText,
+    fontSize: 14,
+    fontWeight: Theme.typography.weights.bold,
   },
   unrecognized: {
     marginTop: 14,
@@ -614,6 +798,30 @@ const styles = StyleSheet.create({
     fontSize: Theme.typography.sizes.caption,
     marginTop: 2,
   },
+  itemCard: {
+    backgroundColor: Theme.colors.accentMuted,
+    borderRadius: 16,
+    marginBottom: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  tagCard: {
+    backgroundColor: 'transparent',
+    borderColor: Theme.colors.sheetBorder,
+    borderWidth: 1.5,
+  },
+  itemHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+  },
+  itemPortions: {
+    marginTop: 12,
+  },
+  removeLabel: {
+    color: Theme.colors.sheetTextMuted,
+    fontSize: 18,
+    marginLeft: 12,
+  },
   selectedDish: {
     alignItems: 'center',
     backgroundColor: Theme.colors.accentMuted,
@@ -655,6 +863,13 @@ const styles = StyleSheet.create({
   chipSelected: {
     backgroundColor: Theme.colors.sheetText,
     borderColor: Theme.colors.sheetText,
+  },
+  chipSmall: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  chipLabelSmall: {
+    fontSize: 13,
   },
   chipLabel: {
     color: Theme.colors.sheetText,

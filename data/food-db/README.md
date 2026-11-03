@@ -30,6 +30,10 @@ Reference nutrition for prepared (non-packaged) dishes. The same dish `id`s will
 
 Retraining a classifier on our own `visual_group`s fixes the first and third; a separate food/not-food check fixes the second.
 
+## Food / not-food check
+
+`assets/models/mobilenet_v1_224_quant.tflite` is Google's MobileNet V1 (224×224, quantized, ImageNet; Apache License 2.0), from https://storage.googleapis.com/download.tensorflow.org/models/tflite/mobilenet_v1_1.0_224_quant_and_labels.zip. Its labels are in `imagenet_labels.txt`. Recognition treats a photo as food when the model's probability on food-related ImageNet classes (`src/features/recognition/foodGateClasses.json`) reaches 0.4; on test photos food scored 0.55–0.99 and non-food 0.36 or less. ImageNet has no Indian dishes, so Indian plates score through classes like plate, soup bowl and bread — tune the threshold on real meals.
+
 ## Licensing
 
 All data comes from **USDA FoodData Central**, which is public domain (CC0 1.0). USDA asks for attribution:

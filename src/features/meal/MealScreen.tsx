@@ -6,7 +6,7 @@ import { SurfaceSheet } from '../../components/SurfaceSheet';
 import { CloseGlyph } from '../../components/CloseGlyph';
 import { SCREEN_HEIGHT } from '../../components/screen';
 import { getFood, portionLabel } from '../foods/foodDb';
-import type { Meal, MealSource, MealType } from '../meals/mealStore';
+import type { Meal, MealItem, MealSource, MealType } from '../meals/mealStore';
 import { Theme } from '../../theme';
 
 const MEAL_TYPE_LABELS: Record<MealType, string> = {
@@ -44,7 +44,6 @@ interface MealScreenProps {
 
 export const MealScreen: React.FC<MealScreenProps> = ({ meal, onClose, onEdit, onDelete }) => {
   const [isSheetExpanded, setIsSheetExpanded] = React.useState(false);
-  const food = meal.dishId ? getFood(meal.dishId) : undefined;
   const nutrition = meal.nutrition;
 
   const confirmDelete = () => {
@@ -56,9 +55,6 @@ export const MealScreen: React.FC<MealScreenProps> = ({ meal, onClose, onEdit, o
   };
 
   const rows: [label: string, value: string][] = [];
-  if (food && meal.quantity) {
-    rows.push(['Portion', `${portionLabel(food, meal.quantity)}${meal.grams ? ` (~${Math.round(meal.grams)} g)` : ''}`]);
-  }
   rows.push(['Meal', MEAL_TYPE_LABELS[meal.mealType]]);
   if (meal.mealSource) rows.push(['From', MEAL_SOURCE_LABELS[meal.mealSource]]);
   if (meal.place) rows.push(['Place', meal.place]);
@@ -84,7 +80,11 @@ export const MealScreen: React.FC<MealScreenProps> = ({ meal, onClose, onEdit, o
       </Pressable>
 
       <SurfaceSheet
-        title={meal.dishName ?? 'Untitled meal'}
+        title={
+          meal.items.length > 2
+            ? `${meal.items[0].name} + ${meal.items.length - 1} more`
+            : (meal.dishName ?? 'Untitled meal')
+        }
         subtitle={formatWhen(meal.capturedAt)}
         titleAccessory={editButton}
         initialSnap="revealed"
@@ -114,6 +114,15 @@ export const MealScreen: React.FC<MealScreenProps> = ({ meal, onClose, onEdit, o
             </View>
           ) : null}
 
+          {meal.items.length > 0 ? (
+            <View style={styles.items}>
+              <Text style={styles.sectionLabel}>ON THE PLATE</Text>
+              {meal.items.map((item, index) => (
+                <ItemRow key={`${index}-${item.name}`} item={item} />
+              ))}
+            </View>
+          ) : null}
+
           <View style={styles.rows}>
             {rows.map(([label, value]) => (
               <View key={label} style={styles.row}>
@@ -132,7 +141,7 @@ export const MealScreen: React.FC<MealScreenProps> = ({ meal, onClose, onEdit, o
 
           {meal.predictedLabel && meal.predictedConfidence !== null ? (
             <Text style={styles.recognition}>
-              Recognised on this phone as {meal.predictedLabel} ({Math.round(meal.predictedConfidence * 100)}%)
+              Mesa’s best guess for this photo: {meal.predictedLabel} ({Math.round(meal.predictedConfidence * 100)}%)
             </Text>
           ) : null}
 
@@ -141,6 +150,21 @@ export const MealScreen: React.FC<MealScreenProps> = ({ meal, onClose, onEdit, o
           </Pressable>
         </ScrollView>
       </SurfaceSheet>
+    </View>
+  );
+};
+
+const ItemRow: React.FC<{ item: MealItem }> = ({ item }) => {
+  const food = item.dishId ? getFood(item.dishId) : undefined;
+  const grams = item.grams ? ` · ~${Math.round(item.grams)} g` : '';
+  const portion = food && item.quantity ? `${portionLabel(food, item.quantity)}${grams}` : 'Tag';
+  return (
+    <View style={styles.itemRow}>
+      <View style={styles.itemText}>
+        <Text style={styles.itemName}>{item.name}</Text>
+        <Text style={styles.itemPortion}>{portion}</Text>
+      </View>
+      {item.nutrition ? <Text style={styles.itemKcal}>{Math.round(item.nutrition.kcal)} kcal</Text> : null}
     </View>
   );
 };
@@ -229,6 +253,34 @@ const styles = StyleSheet.create({
     color: Theme.colors.sheetTextMuted,
     fontSize: 12,
     marginTop: 4,
+  },
+  items: {
+    marginTop: 22,
+  },
+  itemRow: {
+    alignItems: 'center',
+    borderBottomColor: Theme.colors.sheetBorder,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    paddingVertical: 12,
+  },
+  itemText: {
+    flex: 1,
+  },
+  itemName: {
+    color: Theme.colors.sheetText,
+    fontSize: Theme.typography.sizes.body,
+    fontWeight: Theme.typography.weights.bold,
+  },
+  itemPortion: {
+    color: Theme.colors.sheetTextMuted,
+    fontSize: Theme.typography.sizes.caption,
+    marginTop: 2,
+  },
+  itemKcal: {
+    color: Theme.colors.sheetText,
+    fontSize: 15,
+    marginLeft: 12,
   },
   rows: {
     marginTop: 18,

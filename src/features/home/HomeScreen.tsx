@@ -40,9 +40,10 @@ interface HomeScreenProps {
   meals: Meal[];
   onCapturePress: () => void;
   onMealPress: (meal: Meal) => void;
+  onSettingsPress: () => void;
 }
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({ meals, onCapturePress, onMealPress }) => {
+export const HomeScreen: React.FC<HomeScreenProps> = ({ meals, onCapturePress, onMealPress, onSettingsPress }) => {
   const { day, dayAndMonth } = formatToday();
   const mealsToday = countMealsToday(meals);
   const [isSheetExpanded, setIsSheetExpanded] = React.useState(false);
@@ -87,6 +88,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ meals, onCapturePress, o
             </Text>
           </View>
         </View>
+
+        <Pressable
+          style={styles.settingsButton}
+          onPress={onSettingsPress}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Settings"
+        >
+          <Text style={styles.settingsLabel}>Settings</Text>
+        </Pressable>
 
         <Pressable style={styles.captureButton} onPress={handleCapturePress} hitSlop={8}>
           <CameraGlyph />
@@ -237,6 +248,20 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     maxWidth: 320,
     textAlign: 'center',
+  },
+  settingsButton: {
+    position: 'absolute',
+    top: (Platform.OS === 'android' ? StatusBar.currentHeight ?? 0 : 44) + 14,
+    right: Theme.layout.screenPadding,
+    backgroundColor: 'rgba(247, 244, 239, 0.08)',
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  settingsLabel: {
+    color: Theme.colors.canvasTextMuted,
+    fontSize: 14,
+    fontWeight: Theme.typography.weights.bold,
   },
   captureButton: {
     position: 'absolute',
