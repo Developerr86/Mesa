@@ -1,6 +1,7 @@
 import { Directory, File, Paths } from 'expo-file-system';
 import type { SQLiteDatabase } from 'expo-sqlite';
 import type { Nutrition } from '../foods/foodDb';
+import { barcodeFromFoodId } from '../products/openFoodFacts';
 
 export type MealType = 'breakfast' | 'lunch' | 'snack' | 'dinner';
 export type MealSource = 'home' | 'takeout' | 'dine_out';
@@ -51,6 +52,18 @@ export const totalNutrition = (items: MealItem[]): Nutrition | null => {
     for (const n of NUTRIENTS) total[n] += item.nutrition![n];
   }
   return total;
+};
+
+// Where an estimate's numbers come from: the bundled dish database, scanned products, or both
+export const nutritionSources = (items: MealItem[]) => {
+  const withNutrition = items.filter((item) => item.nutrition);
+  const packaged = withNutrition.filter((item) => barcodeFromFoodId(item.dishId)).length;
+  return [
+    packaged < withNutrition.length ? 'USDA FoodData Central' : null,
+    packaged > 0 ? 'Open Food Facts' : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 };
 
 export const summarizeItems = (items: MealItem[]) => ({
@@ -199,6 +212,18 @@ const MIGRATIONS: string[] = [
       kcal, protein_g, carbs_g, fat_g, fiber_g, sugars_g, sodium_mg,
       CASE WHEN dish_id IS NOT NULL AND dish_id = predicted_dish_id THEN predicted_confidence END
     FROM meals WHERE dish_name IS NOT NULL;
+  `,
+  // 4 → 5: packaged products looked up by barcode (see features/products), cached so a
+  // rescan works offline. food_json is null when the product has no nutrition data;
+  // found = 0 records "Open Food Facts doesn't know this barcode".
+  `
+    CREATE TABLE products (
+      barcode TEXT PRIMARY KEY NOT NULL,
+      found INTEGER NOT NULL,
+      name TEXT,
+      food_json TEXT,
+      fetched_at INTEGER NOT NULL
+    );
   `,
 ];
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useSQLiteContext } from 'expo-sqlite';
+import { loadProducts, resolvePendingProducts } from '../products/productStore';
 import { deleteMeal, listMeals, saveMeal, updateMeal, type Meal, type MealDetails } from './mealStore';
 
 export const useMeals = () => {
@@ -7,9 +8,17 @@ export const useMeals = () => {
   const [meals, setMeals] = React.useState<Meal[]>([]);
 
   React.useEffect(() => {
-    listMeals(db)
-      .then(setMeals)
-      .catch((error) => console.warn('Failed to load meals', error));
+    (async () => {
+      // Cached products first, so meals with packaged items can show their portions
+      await loadProducts(db);
+      const loaded = await listMeals(db);
+      setMeals(loaded);
+      // Then fill in anything scanned while offline
+      const resolved = await resolvePendingProducts(db, loaded);
+      if (resolved.length > 0) {
+        setMeals((current) => current.map((meal) => resolved.find((m) => m.id === meal.id) ?? meal));
+      }
+    })().catch((error) => console.warn('Failed to load meals', error));
   }, [db]);
 
   const addMeal = React.useCallback(

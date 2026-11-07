@@ -1,6 +1,6 @@
 # Mesa
 
-A local-first food journal for Android. Take a photo of your meal; Mesa recognises the dishes on the plate **on your phone**, estimates nutrition, and keeps a private photo history of what you ate. No accounts and no cloud: all data stays on the device.
+A local-first food journal for Android. Take a photo of your meal; Mesa recognises the dishes on the plate **on your phone**, estimates nutrition, and keeps a private photo history of what you ate. For packaged food, scan the barcode. No accounts and no cloud: your meals and photos stay on the device. The only network request is the barcode lookup, which sends just the barcode number to Open Food Facts.
 
 > [!WARNING]
 > **Personal use only. Not for commercial use.**
@@ -10,6 +10,7 @@ A local-first food journal for Android. Take a photo of your meal; Mesa recognis
 
 - **Capture**: take a photo with the in-app camera.
 - **Recognise every dish on the plate**: roti, dal, rice, sabzi, idli, chole, gulab jamun and 35 more Indian dishes, plus about 2,000 global dishes. Countable items are counted, so four idlis are filled in as "4 pieces".
+- **Scan packaged food**: point the camera at a pack's barcode. Mesa looks it up on [Open Food Facts](https://world.openfoodfacts.org) and logs it by pack ("½ pack", "2 packs") or by serving for big packs, with the label's nutrition. Looked-up products are cached on the phone. A pack scanned offline is saved by its barcode and filled in the next time Mesa opens with a connection.
 - **Check the photo first**: dark or blank photos and non-food photos get a gentle warning (with "Check for dishes anyway") instead of a confident wrong guess.
 - **Fix anything quickly**: remove a dish, change portions (pieces, katoris, bowls), search 241 dishes, or add anything as a free-text **tag** ("Mango pickle from home").
 - **Nutrition estimates**: kcal, protein, carbs and fat for the whole plate, from USDA FoodData Central.
@@ -69,13 +70,14 @@ src/features/
   meals/                       SQLite schema, migrations, meal + item storage
   foods/                       Dish database (generated), search, portions, nutrition maths
   recognition/                 The three recognition passes and their label maps
+  products/                    Barcode lookup (Open Food Facts) and the on-phone product cache
   settings/                    Settings storage and screen
 assets/models/                 TFLite models (see Licences)
 data/food-db/                  Dish list, nutrition sources and build script
 data/food-detector/            Detector training: dataset merge script, results, retraining
 ```
 
-Data lives in SQLite (`mesa.db`): meals, and the items on each meal. Photos are stored in the app's documents folder. Settings are kept in Expo's SQLite key-value store.
+Data lives in SQLite (`mesa.db`): meals, the items on each meal, and cached barcode lookups. Photos are stored in the app's documents folder. Settings are kept in Expo's SQLite key-value store.
 
 More docs:
 - [`Mesa-build.md`](Mesa-build.md): product vision and roadmap
@@ -91,6 +93,7 @@ More docs:
 | Dish classifier (`food_v1.tflite`) | Google AIY Vision food_V1 | Apache 2.0 |
 | Food check (`mobilenet_v1_224_quant.tflite`) | Google MobileNet V1 | Apache 2.0 |
 | Nutrition data | USDA FoodData Central | Public domain (CC0 1.0) |
+| Packaged food data (looked up per barcode, not bundled) | Open Food Facts | Open Database License (ODbL) |
 
 Attribution: *Indian_Food Dataset*, Royal0wl, Roboflow Universe, 2024. *Thali Dataset*, Calorie Detection, Roboflow Universe, 2023. *IndianFoodNet-30*, Agarwal, Bansal, Choudhury, Sarkar & Ahuja, Roboflow Universe, 2023. U.S. Department of Agriculture, Agricultural Research Service, FoodData Central, https://fdc.nal.usda.gov.
 

@@ -17,9 +17,9 @@ export interface Nutrition {
 export interface Food {
   id: string;
   name: string;
-  category: string;
-  cuisine: string;
-  diet: Diet;
+  category: string; // 'packaged' for scanned products
+  cuisine: string; // the brand, for packaged products
+  diet: Diet | null; // null when a packaged product doesn't say
   portionUnit: string;
   portionGrams: number;
   visualGroup: string;
@@ -35,6 +35,12 @@ const FOODS = foodsJson as Food[];
 const FOODS_BY_ID = new Map(FOODS.map((food) => [food.id, food]));
 
 export const getFood = (id: string) => FOODS_BY_ID.get(id);
+
+// Packaged products (from barcode scans) join the lookup so saved meals can resolve them,
+// but stay out of dish search.
+export const registerFood = (food: Food) => {
+  FOODS_BY_ID.set(food.id, food);
+};
 
 const normalize = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
@@ -85,7 +91,12 @@ const UNIT_LABELS: Record<string, [singular: string, plural: string]> = {
   half: ['half', 'halves'],
   medium: ['medium', 'medium'],
   '6_inch': ['6-inch', '6-inch'],
+  pack: ['pack', 'packs'],
+  serving: ['serving', 'servings'],
 };
+
+// Packaged food comes in packs and servings: half a pack of chips, or two
+const PACKAGED_UNITS = new Set(['pack', 'serving']);
 
 const formatQuantity = (quantity: number) =>
   quantity === 0.5 ? '½' : Number.isInteger(quantity) ? `${quantity}` : `${Math.floor(quantity)}½`;
@@ -96,7 +107,11 @@ export const portionLabel = (food: Food, quantity: number) => {
 };
 
 export const portionOptions = (food: Food): PortionOption[] => {
-  const quantities = COUNTABLE_UNITS.has(food.portionUnit) ? [1, 2, 3, 4, 6] : [0.5, 1, 1.5, 2];
+  const quantities = PACKAGED_UNITS.has(food.portionUnit)
+    ? [0.5, 1, 2, 3]
+    : COUNTABLE_UNITS.has(food.portionUnit)
+      ? [1, 2, 3, 4, 6]
+      : [0.5, 1, 1.5, 2];
   return quantities.map((quantity) => ({ quantity, label: portionLabel(food, quantity) }));
 };
 

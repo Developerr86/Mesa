@@ -6,7 +6,8 @@ import { SurfaceSheet } from '../../components/SurfaceSheet';
 import { CloseGlyph } from '../../components/CloseGlyph';
 import { SCREEN_HEIGHT } from '../../components/screen';
 import { getFood, portionLabel } from '../foods/foodDb';
-import type { Meal, MealItem, MealSource, MealType } from '../meals/mealStore';
+import { barcodeFromFoodId } from '../products/openFoodFacts';
+import { nutritionSources, type Meal, type MealItem, type MealSource, type MealType } from '../meals/mealStore';
 import { Theme } from '../../theme';
 
 const MEAL_TYPE_LABELS: Record<MealType, string> = {
@@ -110,7 +111,7 @@ export const MealScreen: React.FC<MealScreenProps> = ({ meal, onClose, onEdit, o
                 {Math.round(nutrition.fiber_g)} g fiber · {Math.round(nutrition.sugars_g)} g sugars ·{' '}
                 {Math.round(nutrition.sodium_mg)} mg sodium
               </Text>
-              <Text style={styles.nutritionCaption}>Estimate · USDA FoodData Central</Text>
+              <Text style={styles.nutritionCaption}>Estimate · {nutritionSources(meal.items)}</Text>
             </View>
           ) : null}
 
@@ -157,7 +158,12 @@ export const MealScreen: React.FC<MealScreenProps> = ({ meal, onClose, onEdit, o
 const ItemRow: React.FC<{ item: MealItem }> = ({ item }) => {
   const food = item.dishId ? getFood(item.dishId) : undefined;
   const grams = item.grams ? ` · ~${Math.round(item.grams)} g` : '';
-  const portion = food && item.quantity ? `${portionLabel(food, item.quantity)}${grams}` : 'Tag';
+  const portion =
+    food && item.quantity
+      ? `${portionLabel(food, item.quantity)}${grams}`
+      : barcodeFromFoodId(item.dishId)
+        ? 'Packaged'
+        : 'Tag';
   return (
     <View style={styles.itemRow}>
       <View style={styles.itemText}>

@@ -26,6 +26,7 @@ import {
 } from '../foods/foodDb';
 import {
   mealTypeForTime,
+  nutritionSources,
   totalNutrition,
   type Meal,
   type MealDetails,
@@ -34,6 +35,8 @@ import {
   type MealType,
 } from '../meals/mealStore';
 import { recognizeFood, type FoodSuggestion, type Recognition } from '../recognition/recognizeFood';
+import { barcodeFromFoodId } from '../products/openFoodFacts';
+import { pendingProductName, productItem, type ProductScan } from '../products/productStore';
 import { Theme } from '../../theme';
 
 // Dishes the classifier is at least this sure of are added to the plate; weaker ones are offered as chips
@@ -67,10 +70,19 @@ const CUISINE_LABELS: Record<string, string> = {
 const DIET_LABELS: Record<Diet, string> = { veg: 'Veg', egg: 'Egg', non_veg: 'Non-veg' };
 
 const describeFood = (food: Food) => {
+  const diet = food.diet ? ` · ${DIET_LABELS[food.diet]}` : '';
+  if (food.category === 'packaged') return `Packaged${food.cuisine ? ` · ${food.cuisine}` : ''}${diet}`;
   const cuisine =
     CUISINE_LABELS[food.cuisine] ?? food.cuisine.charAt(0).toUpperCase() + food.cuisine.slice(1).replace(/_/g, ' ');
-  return `${cuisine} · ${DIET_LABELS[food.diet]}`;
+  return `${cuisine}${diet}`;
 };
+
+// Tags that came from a barcode: still waiting for a lookup, or a product without nutrition
+const describeProductTag = (item: { name: string; dishId: string | null }) =>
+  item.name === pendingProductName(barcodeFromFoodId(item.dishId) ?? '')
+    ? 'Packaged · Mesa will look it up when you’re online'
+    : 'Packaged · no nutrition data';
+
 
 const formatTime = (date: Date) =>
   new Intl.DateTimeFormat('en-IN', { hour: 'numeric', minute: '2-digit' }).format(date);
@@ -79,6 +91,9 @@ interface MealDetailsScreenProps {
   photoUri: string;
   // When set, the form edits this saved meal instead of logging a new one
   meal?: Meal;
+  // A product barcode read by the camera; the meal starts with that product, and the
+  // dish recogniser (which only knows cooked food) is skipped
+  scan?: ProductScan | null;
   // Settings › "Ask cost for home-cooked meals"
   askCostForHomeMeals: boolean;
   onCancel: () => void;
@@ -91,9 +106,11 @@ const suggestionName = (suggestion: FoodSuggestion) =>
   (suggestion.dishId ? getFood(suggestion.dishId)?.name : null) ?? suggestion.label;
 
 // An item being edited. `food` is null for tags (names that aren't in the food database).
+// `dishId` is the food's id, or a scanned barcode ("off:…") on a product tag.
 interface DraftItem {
   key: string;
   food: Food | null;
+  dishId: string | null;
   name: string;
   quantity: number;
   recognizedConfidence: number | null;
@@ -105,6 +122,7 @@ const draftKey = () => `item-${nextDraftKey++}`;
 const draftFromFood = (food: Food, recognizedConfidence: number | null = null, quantity = 1): DraftItem => ({
   key: draftKey(),
   food,
+  dishId: food.id,
   name: food.name,
   quantity,
   recognizedConfidence,
@@ -115,9 +133,10 @@ const draftFromFood = (food: Food, recognizedConfidence: number | null = null, q
 const draftFromSuggestion = (food: Food, suggestion: FoodSuggestion) =>
   draftFromFood(food, suggestion.confidence, isCountable(food) ? (suggestion.count ?? 1) : 1);
 
-const draftFromTag = (name: string, recognizedConfidence: number | null = null): DraftItem => ({
+const draftFromTag = (name: string, recognizedConfidence: number | null = null, dishId: string | null = null): DraftItem => ({
   key: draftKey(),
   food: null,
+  dishId,
   name,
   quantity: 1,
   recognizedConfidence,
@@ -126,7 +145,7 @@ const draftFromTag = (name: string, recognizedConfidence: number | null = null):
 const toMealItem = (item: DraftItem): MealItem => {
   const grams = item.food ? item.food.portionGrams * item.quantity : null;
   return {
-    dishId: item.food?.id ?? null,
+    dishId: item.dishId,
     name: item.name,
     quantity: item.food ? item.quantity : null,
     grams,
@@ -135,12 +154,20 @@ const toMealItem = (item: DraftItem): MealItem => {
   };
 };
 
+// The meal's starting items for a scanned barcode. Unknown barcodes start empty, with a hint.
+const scannedItems = ({ barcode, lookup }: ProductScan): MealItem[] => {
+  if (lookup.kind === 'found') return [productItem(lookup.product)];
+  if (lookup.kind === 'offline') return [productItem({ barcode, name: pendingProductName(barcode), food: null })];
+  return [];
+};
+
 const sameItem = (item: DraftItem, suggestion: FoodSuggestion) =>
   suggestion.dishId ? item.food?.id === suggestion.dishId : item.name === suggestion.label;
 
 export const MealDetailsScreen: React.FC<MealDetailsScreenProps> = ({
   photoUri,
   meal,
+  scan,
   askCostForHomeMeals,
   onCancel,
   onRetake,
@@ -153,10 +180,12 @@ export const MealDetailsScreen: React.FC<MealDetailsScreenProps> = ({
 
   const [query, setQuery] = React.useState('');
   const [items, setItems] = React.useState<DraftItem[]>(() =>
-    (meal?.items ?? []).map((item) => {
+    (meal?.items ?? (scan ? scannedItems(scan) : [])).map((item) => {
       const food = item.dishId ? getFood(item.dishId) : undefined;
       return {
-        ...(food ? draftFromFood(food, item.recognizedConfidence) : draftFromTag(item.name, item.recognizedConfidence)),
+        ...(food
+          ? draftFromFood(food, item.recognizedConfidence)
+          : draftFromTag(item.name, item.recognizedConfidence, item.dishId)),
         quantity: item.quantity ?? 1,
       };
     })
@@ -169,7 +198,9 @@ export const MealDetailsScreen: React.FC<MealDetailsScreenProps> = ({
   const [keyboardHeight, setKeyboardHeight] = React.useState(0);
   const [isSheetExpanded, setIsSheetExpanded] = React.useState(false);
   // Saved meals already went through recognition; editing never re-runs it
-  const [recognition, setRecognition] = React.useState<Recognition | null | 'pending'>(meal ? null : 'pending');
+  const [recognition, setRecognition] = React.useState<Recognition | null | 'pending'>(
+    meal || scan ? null : 'pending'
+  );
   const userEditedItems = React.useRef(false);
 
   // Run on-device recognition; add every dish it's confident about, unless the user has
@@ -194,13 +225,13 @@ export const MealDetailsScreen: React.FC<MealDetailsScreenProps> = ({
   );
 
   React.useEffect(() => {
-    if (meal) return;
+    if (meal || scan) return;
     let cancelled = false;
     runRecognition(false, () => cancelled);
     return () => {
       cancelled = true;
     };
-  }, [meal, runRecognition]);
+  }, [meal, scan, runRecognition]);
 
   React.useEffect(() => {
     const show = Keyboard.addListener('keyboardDidShow', (event) => setKeyboardHeight(event.endCoordinates.height));
@@ -400,6 +431,12 @@ export const MealDetailsScreen: React.FC<MealDetailsScreenProps> = ({
               </Pressable>
             ) : null}
 
+            {scan?.lookup.kind === 'not_found' && items.length === 0 && !query ? (
+              <Text style={[styles.recognizingLabel, styles.unrecognized]}>
+                Barcode {scan.barcode} isn’t in Open Food Facts yet. Type the product’s name above to add it.
+              </Text>
+            ) : null}
+
             {recognition === 'pending' ? (
               <View style={styles.recognizing}>
                 <ActivityIndicator size="small" color={Theme.colors.sheetTextMuted} />
@@ -440,7 +477,7 @@ export const MealDetailsScreen: React.FC<MealDetailsScreenProps> = ({
               </Text>
               <Text style={styles.nutritionCaption}>
                 Estimate for {mealItems.filter((item) => item.nutrition).length === 1 ? 'this dish' : 'these dishes'}
-                {mealItems.some((item) => !item.nutrition) ? ' (tags not counted)' : ''} · USDA FoodData Central
+                {mealItems.some((item) => !item.nutrition) ? ' (tags not counted)' : ''} · {nutritionSources(mealItems)}
               </Text>
             </View>
           ) : null}
@@ -543,7 +580,11 @@ const ItemCard: React.FC<{
           <Text style={styles.selectedDishName}>{item.name}</Text>
           <Text style={styles.selectedDishMeta}>
             {item.recognizedConfidence !== null ? 'Recognised on this phone · ' : ''}
-            {item.food ? describeFood(item.food) : 'Tag · not in the food list'}
+            {item.food
+              ? describeFood(item.food)
+              : barcodeFromFoodId(item.dishId)
+                ? describeProductTag(item)
+                : 'Tag · not in the food list'}
             {kcal !== null ? ` · ≈ ${Math.round(kcal)} kcal` : ''}
           </Text>
         </View>
@@ -643,7 +684,8 @@ const Chip: React.FC<ChipProps> = ({ label, selected, small, onPress }) => (
 );
 
 // The familiar Indian food-label mark: a dot inside a square, green for veg, brown for non-veg
-const DietMark: React.FC<{ diet: Diet }> = ({ diet }) => {
+const DietMark: React.FC<{ diet: Diet | null }> = ({ diet }) => {
+  if (!diet) return null;
   const color = diet === 'veg' ? '#3A8A4B' : diet === 'egg' ? '#C9A227' : '#8B3A2B';
   return (
     <View style={[styles.dietMark, { borderColor: color }]}>

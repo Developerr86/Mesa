@@ -10,6 +10,7 @@ import { SettingsScreen } from './src/features/settings/SettingsScreen';
 import { useSettings } from './src/features/settings/settings';
 import { DATABASE_NAME, migrateDbIfNeeded } from './src/features/meals/mealStore';
 import { useMeals } from './src/features/meals/useMeals';
+import type { ProductScan } from './src/features/products/productStore';
 
 export default function App() {
   return (
@@ -24,7 +25,7 @@ export default function App() {
 type Screen =
   | { name: 'home' }
   | { name: 'capture' }
-  | { name: 'details'; photoUri: string }
+  | { name: 'details'; photoUri: string; scan: ProductScan | null }
   | { name: 'meal'; mealId: number }
   | { name: 'edit'; mealId: number }
   | { name: 'settings' };
@@ -52,13 +53,14 @@ function Mesa() {
       return (
         <CaptureScreen
           onClose={goHome}
-          onCapture={(photoUri) => setScreen({ name: 'details', photoUri })}
+          onCapture={(photoUri, scan) => setScreen({ name: 'details', photoUri, scan })}
         />
       );
     case 'details':
       return (
         <MealDetailsScreen
           photoUri={screen.photoUri}
+          scan={screen.scan}
           askCostForHomeMeals={settings.askCostForHomeMeals}
           onCancel={goHome}
           onRetake={() => setScreen({ name: 'capture' })}
